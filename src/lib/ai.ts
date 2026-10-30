@@ -2,11 +2,14 @@ import { GoogleGenAI, Modality, Type } from "@google/genai";
 import type { Difficulty, Scenario } from "@prisma/client";
 import { heuristicScore, parseScore, type Line, type Score } from "./scoring";
 
-const TEXT_MODEL = process.env.GEMINI_TEXT_MODEL ?? "gemini-2.5-flash";
-export const LIVE_MODEL = process.env.GEMINI_LIVE_MODEL ?? "gemini-2.5-flash-native-audio-preview-09-2025";
+// 3.5-flash: ~1.5s replies in good Georgian; 3.8-flash was overloaded (503) when tested 2026-10-30.
+const TEXT_MODEL = process.env.GEMINI_TEXT_MODEL ?? "gemini-3.5-flash";
+export const LIVE_MODEL = process.env.GEMINI_LIVE_MODEL ?? "gemini-3.8-live";
 
 export const aiConfigured = () => Boolean(process.env.GEMINI_API_KEY);
 const client = () => new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+// Phone-call replies must be fast; with thinking on, replies took ~45s and got cut off.
+const NO_THINKING = { thinkingConfig: { thinkingBudget: 0 } };
 
 export type CustomProduct = { name: string; description: string; price: string; target: string };
 
@@ -39,29 +42,46 @@ const MOCK_REPLIES = {
   en: ["Hello, what is this about?", "Interesting, but why should I choose you?", "That seems a bit expensive.", "OK, what else makes it worth it?", "Let me think about it and get back to you."],
 };
 
-export async function customerReply(system: string, transcript: Line[], locale: string) {
-  if (!aiConfigured()) {
-    // shortcut: canned replies when no GEMINI_API_KEY (local dev only).
-    const list = MOCK_REPLIES[locale === "en" ? "en" : "ka"];
-    return list[Math.min(transcript.filter((l) => l.role === "ai").length, list.length - 1)];
-  }
-  const res = await client().models.generateContent({
-    model: TEXT_MODEL,
-    contents: transcript.map((l) => ({ role: l.role === "user" ? "user" : "model", parts: [{ text: l.text }] })),
-    config: { systemInstruction: system, maxOutputTokens: 200 },
-  });
-  return res.text?.trim() || "...";
+// shortcut: canned replies when Gemini is not configured or fails (e.g. 503 overload), so a call never breaks.
+function mockReply(transcript: Line[], locale: string) {
+  const list = MOCK_REPLIES[locale === "en" ? "en" : "ka"];
+  return list[Math.min(transcript.filter((l) => l.role === "ai").length, list.length - 1)];
 }
 
-export async function coachHint(transcript: Line[], locale: string) {
-  if (!aiConfigured()) {
-    return locale === "ka" ? "დასვი ღია კითხვა: „რა არის თქვენთვის ყველაზე მნიშვნელოვანი?“" : "Ask an open question: \"What matters most to you here?\"";
+export async function customerReply(system: string, transcript: Line[], locale: string) {
+  if (!aiConfigured()) return mockReply(transcript, locale);
+  try {
+    const res = await client().models.generateContent({
+      model: TEXT_MODEL,
+      contents: transcript.map((l) => ({ role: l.role === "user" ? "user" : "model", parts: [{ text: l.text }] })),
+      config: { systemInstruction: system, maxOutputTokens: 300, ...NO_THINKING },
+    });
+    return res.text?.trim() || mockReply(transcript, locale);
+  } catch (e) {
+    console.error("customerReply failed", e);
+    return mockReply(transcript, locale);
   }
-  const res = await client().models.generateContent({
-    model: TEXT_MODEL,
-    contents: `You are a sales coach. Here is a sales call so far:\n${fmt(transcript)}\n\nGive the SELLER one short, concrete tip (max 25 words) for their next line. Answer in ${locale === "ka" ? "Georgian" : "English"}.`,
-  });
-  return res.text?.trim() ?? "";
+}
+
+const FALLBACK_HINT = {
+  ka: "დასვი ღია კითხვა: „რა არის თქვენთვის ყველაზე მნიშვნელოვანი?“",
+  en: "Ask an open question: \"What matters most to you here?\"",
+};
+
+export async function coachHint(transcript: Line[], locale: string) {
+  const fallback = FALLBACK_HINT[locale === "en" ? "en" : "ka"];
+  if (!aiConfigured()) return fallback;
+  try {
+    const res = await client().models.generateContent({
+      model: TEXT_MODEL,
+      contents: `You are a sales coach. Here is a sales call so far:\n${fmt(transcript)}\n\nGive the SELLER one short, concrete tip (max 25 words) for their next line. Answer in ${locale === "ka" ? "Georgian" : "English"}.`,
+      config: NO_THINKING,
+    });
+    return res.text?.trim() || fallback;
+  } catch (e) {
+    console.error("coachHint failed", e);
+    return fallback;
+  }
 }
 
 const fmt = (t: Line[]) => t.map((l) => `${l.role === "user" ? "SELLER" : "CUSTOMER"}: ${l.text}`).join("\n");
@@ -86,9 +106,7 @@ const SCORE_SCHEMA = {
 
 export async function scoreCall(transcript: Line[], persona: string, locale: string): Promise<Score> {
   if (!aiConfigured() || !transcript.some((l) => l.role === "user")) return heuristicScore(transcript, locale);
-  const res = await client().models.generateContent({
-    model: TEXT_MODEL,
-    contents: `You are an expert sales coach. Evaluate the SELLER in this practice call.
+  const prompt = `You are an expert sales coach. Evaluate the SELLER in this practice call.
 Customer persona: ${persona}
 
 Transcript:
@@ -98,14 +116,21 @@ Score 0-100 overall and for: opening, discovery (questions), value (presentation
 outcome: SOLD if the customer agreed to buy, FOLLOW_UP if they agreed to a next step, LOST otherwise.
 wellDone: exactly 3 things done well. improve: exactly 3 things to improve.
 rewrite: rewrite the seller's weakest moment as a better line.
-Write all text in ${locale === "ka" ? "Georgian" : "English"}.`,
-    config: { responseMimeType: "application/json", responseSchema: SCORE_SCHEMA },
-  });
-  try {
-    return parseScore(res.text ?? "");
-  } catch {
-    return heuristicScore(transcript, locale);
+Write all text in ${locale === "ka" ? "Georgian" : "English"}.`;
+  // Two tries (503 overloads are short-lived), then the heuristic so an ended call always gets a score.
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const res = await client().models.generateContent({
+        model: TEXT_MODEL,
+        contents: prompt,
+        config: { responseMimeType: "application/json", responseSchema: SCORE_SCHEMA, ...NO_THINKING },
+      });
+      return parseScore(res.text ?? "");
+    } catch (e) {
+      console.error(`scoreCall attempt ${attempt} failed`, e);
+    }
   }
+  return heuristicScore(transcript, locale);
 }
 
 // One-use ephemeral token so the browser can open a Gemini Live session without seeing our API key.
