@@ -1,0 +1,23 @@
+# Build the image, push it, deploy to Cloud Run.
+# Trigger: gcloud builds submit --config cloudbuild.yaml
+substitutions:
+  _REGION: europe-west3
+  _SERVICE: pitchup
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args: ["build", "-t", "$_REGION-docker.pkg.dev/$PROJECT_ID/pitchup/app:$BUILD_ID", "."]
+  - name: gcr.io/cloud-builders/docker
+    args: ["push", "$_REGION-docker.pkg.dev/$PROJECT_ID/pitchup/app:$BUILD_ID"]
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - $_SERVICE
+      - --image=$_REGION-docker.pkg.dev/$PROJECT_ID/pitchup/app:$BUILD_ID
+      - --region=$_REGION
+      - --allow-unauthenticated
+      - --set-secrets=DATABASE_URL=DATABASE_URL:latest,DIRECT_URL=DIRECT_URL:latest,FIREBASE_SERVICE_ACCOUNT=FIREBASE_SERVICE_ACCOUNT:latest,STRIPE_SECRET_KEY=STRIPE_SECRET_KEY:latest,STRIPE_WEBHOOK_SECRET=STRIPE_WEBHOOK_SECRET:latest,GEMINI_API_KEY=GEMINI_API_KEY:latest
+      - --env-vars-file=env.cloudrun.yaml
+images:
+  - $_REGION-docker.pkg.dev/$PROJECT_ID/pitchup/app:$BUILD_ID

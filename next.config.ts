@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
+import createNextIntlPlugin from "next-intl/plugin";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  output: "standalone",
+  images: { remotePatterns: [{ hostname: "lh3.googleusercontent.com" }] },
 };
 
-export default nextConfig;
+export default createNextIntlPlugin()(nextConfig);

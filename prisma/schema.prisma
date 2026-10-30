@@ -1,0 +1,248 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  // Supabase: DATABASE_URL = pooled (port 6543, used by the app), DIRECT_URL = direct (port 5432, used by migrations)
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  STUDENT
+  ADMIN
+}
+
+enum LessonType {
+  TEXT
+  VIDEO
+  QUIZ
+  CALL
+}
+
+enum Difficulty {
+  EASY
+  NORMAL
+  HARD
+  BOSS
+}
+
+enum Outcome {
+  SOLD
+  FOLLOW_UP
+  LOST
+}
+
+model User {
+  id                  String           @id @default(cuid())
+  firebaseUid         String           @unique
+  email               String?
+  name                String?
+  avatarUrl           String?
+  locale              String           @default("ka")
+  role                Role             @default(STUDENT)
+  banned              Boolean          @default(false)
+  leaderboardOptOut   Boolean          @default(false)
+  level               Int              @default(1)
+  xp                  Int              @default(0)
+  streakDays          Int              @default(0)
+  lastActiveAt        DateTime?
+  createdAt           DateTime         @default(now())
+  stripeCustomerId    String?          @unique
+  calls               Call[]
+  progress            LessonProgress[]
+  enrollments         Enrollment[]
+  subscriptions       Subscription[]
+  purchases           Purchase[]
+  badges              UserBadge[]
+}
+
+model Profession {
+  id            String     @id @default(cuid())
+  slug          String     @unique
+  titleKa       String
+  titleEn       String
+  descriptionKa String
+  descriptionEn String
+  icon          String
+  order         Int        @default(0)
+  courses       Course[]
+  scenarios     Scenario[]
+}
+
+model Course {
+  id            String       @id @default(cuid())
+  slug          String       @unique
+  professionId  String
+  profession    Profession   @relation(fields: [professionId], references: [id], onDelete: Cascade)
+  titleKa       String
+  titleEn       String
+  descriptionKa String
+  descriptionEn String
+  coverUrl      String?
+  durationMin   Int          @default(30)
+  requiredLevel Int          @default(1)
+  isFree        Boolean      @default(true)
+  priceGel      Int          @default(0)
+  priceUsd      Int          @default(0)
+  published     Boolean      @default(true)
+  modules       Module[]
+  enrollments   Enrollment[]
+  purchases     Purchase[]
+}
+
+model Module {
+  id       String   @id @default(cuid())
+  courseId String
+  course   Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  titleKa  String
+  titleEn  String
+  order    Int      @default(0)
+  lessons  Lesson[]
+}
+
+model Lesson {
+  id         String           @id @default(cuid())
+  moduleId   String
+  module     Module           @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  type       LessonType       @default(TEXT)
+  titleKa    String
+  titleEn    String
+  contentKa  String           @default("")
+  contentEn  String           @default("")
+  videoUrl   String?
+  scenarioId String?
+  scenario   Scenario?        @relation(fields: [scenarioId], references: [id], onDelete: SetNull)
+  xpReward   Int              @default(10)
+  order      Int              @default(0)
+  questions  Question[]
+  progress   LessonProgress[]
+}
+
+model Question {
+  id           String @id @default(cuid())
+  lessonId     String
+  lesson       Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  questionKa   String
+  questionEn   String
+  // [{ka, en}]
+  options      Json
+  correctIndex Int
+}
+
+model Scenario {
+  id              String     @id @default(cuid())
+  professionId    String
+  profession      Profession @relation(fields: [professionId], references: [id], onDelete: Cascade)
+  titleKa         String
+  titleEn         String
+  difficulty      Difficulty @default(NORMAL)
+  requiredLevel   Int        @default(1)
+  isPro           Boolean    @default(false)
+  personaPromptKa String
+  personaPromptEn String
+  customerName    String
+  avatarUrl       String?
+  calls           Call[]
+  lessons         Lesson[]
+}
+
+model LessonProgress {
+  userId      String
+  lessonId    String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson      Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  completedAt DateTime @default(now())
+  score       Int?
+
+  @@id([userId, lessonId])
+}
+
+model Enrollment {
+  userId         String
+  courseId       String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course         Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  startedAt      DateTime  @default(now())
+  completedAt    DateTime?
+  certificateUrl String?
+
+  @@id([userId, courseId])
+}
+
+model Call {
+  id            String     @id @default(cuid())
+  userId        String?
+  user          User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scenarioId    String
+  scenario      Scenario   @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  difficulty    Difficulty @default(NORMAL)
+  mode          String     @default("text")
+  customProduct Json?
+  locale        String     @default("ka")
+  maxSec        Int        @default(300)
+  startedAt     DateTime   @default(now())
+  endedAt       DateTime?
+  durationSec   Int?
+  // [{role: "user"|"ai", text}]
+  transcript    Json       @default("[]")
+  outcome       Outcome?
+  score         Int?
+  subScores     Json?
+  feedback      Json?
+  xpEarned      Int        @default(0)
+  hintsUsed     Int        @default(0)
+
+  @@index([userId, startedAt])
+}
+
+model Subscription {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stripeCustomerId String
+  stripeSubId      String   @unique
+  plan             String
+  status           String
+  currentPeriodEnd DateTime
+}
+
+model Purchase {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId        String?
+  course          Course?  @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  stripePaymentId String   @unique
+  amount          Int
+  currency        String
+  createdAt       DateTime @default(now())
+}
+
+model Badge {
+  id      String      @id
+  titleKa String
+  titleEn String
+  icon    String
+  users   UserBadge[]
+}
+
+model UserBadge {
+  userId    String
+  badgeId   String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge     Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  awardedAt DateTime @default(now())
+
+  @@id([userId, badgeId])
+}
+
+// key = "user:<id>" or "ip:<hash>" so guests are rate-limited too
+model DailyUsage {
+  key       String
+  date      String
+  callsUsed Int    @default(0)
+
+  @@id([key, date])
+}
