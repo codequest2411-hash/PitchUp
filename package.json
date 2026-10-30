@@ -40,5 +40,8 @@
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
+  },
+  "overrides": {
+    "jose": "^5.10.0"
   }
 }
