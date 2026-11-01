@@ -1,6 +1,6 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
-import { db } from "@/lib/db";
+import { getProfessions } from "@/lib/catalog";
 import { getUser } from "@/lib/auth";
 import { isPro } from "@/lib/access";
 import { tr } from "@/lib/loc";
@@ -11,7 +11,7 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
   setRequestLocale(locale);
   const t = await getTranslations("landing");
   const user = await getUser();
-  const professions = await db.profession.findMany({ orderBy: { order: "asc" } });
+  const professions = await getProfessions();
 
   return (
     <div className="space-y-20">

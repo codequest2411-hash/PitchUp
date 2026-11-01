@@ -1,13 +1,13 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
-import { db } from "@/lib/db";
+import { getProfessionsWithCounts } from "@/lib/catalog";
 import { tr } from "@/lib/loc";
 
 export default async function Page({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations("professions");
-  const list = await db.profession.findMany({ orderBy: { order: "asc" }, include: { _count: { select: { courses: true, scenarios: true } } } });
+  const list = await getProfessionsWithCounts();
 
   return (
     <div className="space-y-6">

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { db } from "@/lib/db";
+import { getCourse } from "@/lib/catalog";
 import { tr } from "@/lib/loc";
 import { getUser } from "@/lib/auth";
 import { canAccessCourse, userContext } from "@/lib/access";
@@ -14,10 +15,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   setRequestLocale(locale);
   const t = await getTranslations("courses");
   const tc = await getTranslations("common");
-  const course = await db.course.findUnique({
-    where: { slug },
-    include: { profession: true, modules: { orderBy: { order: "asc" }, include: { lessons: { orderBy: { order: "asc" } } } } },
-  });
+  const course = await getCourse(slug);
   if (!course || !course.published) notFound();
 
   const user = await getUser();

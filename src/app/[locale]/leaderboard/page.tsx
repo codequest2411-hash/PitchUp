@@ -1,5 +1,6 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { db } from "@/lib/db";
+import { getProfessions } from "@/lib/catalog";
 import { tr } from "@/lib/loc";
 
 export default async function Page({ params, searchParams }: { params: Promise<{ locale: string }>; searchParams: Promise<{ profession?: string }> }) {
@@ -8,7 +9,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const { profession } = await searchParams;
   const t = await getTranslations("leaderboard");
   const tc = await getTranslations("common");
-  const professions = await db.profession.findMany({ orderBy: { order: "asc" } });
+  const professions = await getProfessions();
 
   const rows = await db.call.groupBy({
     by: ["userId"],

@@ -1,5 +1,5 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { db } from "@/lib/db";
+import { getCourses, getProfessions } from "@/lib/catalog";
 import { tr } from "@/lib/loc";
 import { CourseCard } from "@/components/CourseCard";
 
@@ -11,18 +11,10 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const sp = await searchParams;
   const t = await getTranslations("courses");
   const tc = await getTranslations("common");
-  const professions = await db.profession.findMany({ orderBy: { order: "asc" } });
-  const level = Number(sp.level) || undefined;
-  const courses = await db.course.findMany({
-    where: {
-      published: true,
-      profession: sp.profession ? { slug: sp.profession } : undefined,
-      isFree: sp.price === "free" ? true : sp.price === "paid" ? false : undefined,
-      requiredLevel: level ? { lte: level } : undefined,
-    },
-    include: { profession: true },
-    orderBy: [{ profession: { order: "asc" } }, { requiredLevel: "asc" }],
-  });
+  const [professions, courses] = await Promise.all([
+    getProfessions(),
+    getCourses(sp.profession, sp.price, Number(sp.level) || undefined),
+  ]);
 
   return (
     <div className="space-y-6">

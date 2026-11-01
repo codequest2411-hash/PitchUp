@@ -1,5 +1,6 @@
 "use server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { CATALOG_TAG } from "@/lib/catalog";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/guard";
@@ -16,6 +17,7 @@ export async function saveEntityAction(model: string, id: string | null, form: F
   } catch (e) {
     return { error: e instanceof Error ? e.message.split("\n").pop() : "save failed" };
   }
+  revalidateTag(CATALOG_TAG);
   revalidatePath("/", "layout");
   return {};
 }
@@ -24,6 +26,7 @@ export async function deleteEntityAction(model: string, id: string) {
   await requireAdmin();
   if (!isEntity(model)) throw new Error("unknown model");
   await delegate(model).delete({ where: { id } });
+  revalidateTag(CATALOG_TAG);
   revalidatePath("/", "layout");
 }
 

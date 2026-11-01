@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link, redirect } from "@/i18n/navigation";
 import { db } from "@/lib/db";
+import { getCourse } from "@/lib/catalog";
 import { tr } from "@/lib/loc";
 import { getUser } from "@/lib/auth";
 import { canAccessCourse, userContext } from "@/lib/access";
@@ -11,10 +12,7 @@ export default async function Page({ params }: { params: Promise<{ locale: strin
   const { locale, course: slug, lesson: lessonId } = await params;
   setRequestLocale(locale);
   const t = await getTranslations("lesson");
-  const course = await db.course.findUnique({
-    where: { slug },
-    include: { modules: { orderBy: { order: "asc" }, include: { lessons: { orderBy: { order: "asc" }, include: { questions: true } } } } },
-  });
+  const course = await getCourse(slug);
   const lessons = course?.modules.flatMap((m) => m.lessons) ?? [];
   const idx = lessons.findIndex((l) => l.id === lessonId);
   if (!course || idx < 0) notFound();

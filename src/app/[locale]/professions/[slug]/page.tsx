@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
-import { db } from "@/lib/db";
+import { getProfession } from "@/lib/catalog";
 import { tr } from "@/lib/loc";
 import { CourseCard } from "@/components/CourseCard";
 
@@ -11,10 +11,7 @@ export default async function Page({ params }: { params: Promise<{ locale: strin
   const t = await getTranslations("professions");
   const tc = await getTranslations("common");
   const td = await getTranslations("difficulty");
-  const p = await db.profession.findUnique({
-    where: { slug },
-    include: { courses: { where: { published: true }, orderBy: { requiredLevel: "asc" }, include: { profession: true } }, scenarios: { orderBy: { requiredLevel: "asc" } } },
-  });
+  const p = await getProfession(slug);
   if (!p) notFound();
 
   return (

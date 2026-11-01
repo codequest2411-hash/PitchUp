@@ -2,11 +2,14 @@ import type { Metadata } from "next";
 import { Inter, Noto_Sans_Georgian } from "next/font/google";
 import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
-import { getTranslations, setRequestLocale } from "next-intl/server";
+import { getMessages, getTranslations, setRequestLocale } from "next-intl/server";
 import { routing } from "@/i18n/routing";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import "../globals.css";
+
+const CLIENT_NAMESPACES = ["common", "auth", "practice", "difficulty", "lesson", "call"];
+const pick = (m: Record<string, unknown>, keys: string[]) => Object.fromEntries(keys.map((k) => [k, m[k]]));
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const georgian = Noto_Sans_Georgian({ subsets: ["georgian"], variable: "--font-georgian" });
@@ -24,7 +27,8 @@ export default async function LocaleLayout({ children, params }: { children: Rea
   return (
     <html lang={locale}>
       <body className={`${inter.variable} ${georgian.variable} flex min-h-screen flex-col font-sans antialiased`}>
-        <NextIntlClientProvider>
+        {/* Only the namespaces client components use, instead of every translation on every page. */}
+        <NextIntlClientProvider messages={pick(await getMessages(), CLIENT_NAMESPACES)}>
           <Header locale={locale} />
           <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">{children}</main>
           <Footer />

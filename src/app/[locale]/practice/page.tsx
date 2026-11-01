@@ -1,5 +1,5 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { db } from "@/lib/db";
+import { getProfessionsWithScenarios } from "@/lib/catalog";
 import { tr } from "@/lib/loc";
 import { getUser } from "@/lib/auth";
 import { callsUsedToday, FREE_CALLS_PER_DAY, userContext } from "@/lib/access";
@@ -14,7 +14,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const tc = await getTranslations("common");
   const user = await getUser();
   const { pro, level } = await userContext(user);
-  const professions = await db.profession.findMany({ orderBy: { order: "asc" }, include: { scenarios: { orderBy: { requiredLevel: "asc" } } } });
+  const professions = await getProfessionsWithScenarios();
   const callsLeft = user && !pro ? Math.max(0, FREE_CALLS_PER_DAY - (await callsUsedToday(`user:${user.id}`))) : null;
 
   const preset = sp.scenario ? professions.find((p) => p.scenarios.some((s) => s.id === sp.scenario)) : undefined;
