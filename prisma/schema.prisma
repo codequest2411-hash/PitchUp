@@ -42,7 +42,7 @@ model User {
   email               String?
   name                String?
   avatarUrl           String?
-  locale              String           @default("ka")
+  locale              String           @default("en")
   role                Role             @default(STUDENT)
   banned              Boolean          @default(false)
   leaderboardOptOut   Boolean          @default(false)
@@ -182,7 +182,7 @@ model Call {
   difficulty    Difficulty @default(NORMAL)
   mode          String     @default("text")
   customProduct Json?
-  locale        String     @default("ka")
+  locale        String     @default("en")
   maxSec        Int        @default(300)
   startedAt     DateTime   @default(now())
   endedAt       DateTime?

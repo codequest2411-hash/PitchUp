@@ -1,6 +1,6 @@
 # PitchUp (პიჩაპი)
 
-Learn to sell by talking to an AI customer. Pick a profession, call a realistic AI customer (voice or text), handle objections, close — and get scored on 6 skills. Levels, XP, badges, free + paid courses, Georgian + English.
+Learn to sell by talking to an AI customer. Pick a profession, call a realistic AI customer (voice or text), handle objections, close — and get scored on 6 skills. Levels, XP, badges, free + paid courses, English + Georgian.
 
 **Stack:** Next.js 15 (App Router) · Tailwind 4 · next-intl (`/ka`, `/en`) · Prisma + Supabase (PostgreSQL) · Firebase Auth (Google + email) · Gemini Live (voice) + Gemini (text, scoring) · Stripe · Cloud Run.
 

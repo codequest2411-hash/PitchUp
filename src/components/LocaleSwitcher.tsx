@@ -11,7 +11,7 @@ export function LocaleSwitcher({ current, loggedIn }: { current: string; loggedI
 
   return (
     <div className="flex overflow-hidden rounded-xl border border-line text-xs font-bold" role="group" aria-label="Language">
-      {["ka", "en"].map((l) => (
+      {["en", "ka"].map((l) => (
         <button
           key={l}
           onClick={() => change(l)}
