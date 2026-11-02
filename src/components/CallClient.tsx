@@ -33,7 +33,7 @@ export function CallClient(p: Props) {
   const [showTranscript, setShowTranscript] = useState(p.mode === "text");
   const [notice, setNotice] = useState<string | null>(null);
   const [hint, setHint] = useState<string | null>(null);
-  const [liveCoach, setLiveCoach] = useState(false);
+  const [liveCoach, setLiveCoach] = useState(true);
   const [suggestion, setSuggestion] = useState<string | null>(null);
   const coachedAt = useRef(-1);
   const [input, setInput] = useState("");
@@ -51,7 +51,7 @@ export function CallClient(p: Props) {
     try {
       const saved = localStorage.getItem("callSkin");
       if (saved && saved in SKINS) setSkin(saved as Skin);
-      setLiveCoach(localStorage.getItem("liveCoach") === "1");
+      setLiveCoach(localStorage.getItem("liveCoach") !== "0");
     } catch {}
   }, []);
   function toggleCoach() {

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { aiConfigured, LIVE_MODEL, liveToken } from "@/lib/ai";
+import { aiConfigured, LIVE_MODEL, liveToken, voiceFor } from "@/lib/ai";
 import { callPersona, elapsedSec, loadCall } from "@/lib/calls";
 
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -10,7 +10,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   if (call.endedAt || left <= 0) return NextResponse.json({ error: "ended" }, { status: 409 });
   try {
     // Token expiry = remaining call time, so the max call length is enforced by Google, not the browser.
-    return NextResponse.json({ token: await liveToken(callPersona(call), left, call.locale), model: LIVE_MODEL });
+    return NextResponse.json({ token: await liveToken(callPersona(call), left, call.locale, voiceFor(call.scenario.customerName)), model: LIVE_MODEL });
   } catch (e) {
     console.error("live token failed", e);
     return NextResponse.json({ error: "unavailable" }, { status: 503 });

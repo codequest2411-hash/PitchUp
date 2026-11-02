@@ -9,6 +9,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "db:seed": "tsx prisma/seed.ts",
+    "eval:customer": "tsx --env-file=.env scripts/eval-customer.ts",
     "db:dev": "prisma dev --name pitchup --detach",
     "postinstall": "prisma generate"
   },

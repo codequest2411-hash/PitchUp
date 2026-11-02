@@ -92,6 +92,20 @@ export async function startVoice(token: string, model: string, h: VoiceHandlers)
     },
   });
 
+  // Feels like a real call: two rings (425 Hz ringback), then the customer picks up and speaks first.
+  for (let i = 0; i < 2; i++) {
+    const tone = outCtx.createOscillator();
+    const gain = outCtx.createGain();
+    tone.frequency.value = 425;
+    gain.gain.value = 0.12;
+    tone.connect(gain).connect(outCtx.destination);
+    tone.start(outCtx.currentTime + i * 2);
+    tone.stop(outCtx.currentTime + i * 2 + 1);
+  }
+  setTimeout(() => {
+    if (!stopped) session.sendClientContent({ turns: [{ role: "user", parts: [{ text: "(Your phone rings and you pick up.)" }] }], turnComplete: true });
+  }, 3500);
+
   capture.port.onmessage = (e: MessageEvent<ArrayBuffer>) => {
     if (!muted && !stopped) session.sendRealtimeInput({ audio: { data: toBase64(e.data), mimeType: "audio/pcm;rate=16000" } });
   };

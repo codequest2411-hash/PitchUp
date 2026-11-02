@@ -5,6 +5,8 @@ import { heuristicScore, parseScore, type Line, type Score } from "./scoring";
 // 3.5-flash: ~1.5s replies in good Georgian; 3.8-flash was overloaded (503) when tested 2026-10-30.
 const TEXT_MODEL = process.env.GEMINI_TEXT_MODEL ?? "gemini-3.5-flash";
 export const LIVE_MODEL = process.env.GEMINI_LIVE_MODEL ?? "gemini-3.8-live";
+// Scoring isn't latency-critical: try the newest flash first, fall back when it's overloaded (503s seen 2026-11-02).
+const SMART_MODELS = [process.env.GEMINI_SMART_MODEL ?? "gemini-3.8-flash", TEXT_MODEL];
 
 export const aiConfigured = () => Boolean(process.env.GEMINI_API_KEY);
 const client = () => new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
@@ -12,6 +14,18 @@ const client = () => new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 const NO_THINKING = { thinkingConfig: { thinkingBudget: 0 } };
 
 export type CustomProduct = { name: string; description: string; price: string; target: string };
+
+// Seeded customer names (Georgian + Latin spellings). Anything not listed is treated as female.
+// shortcut: name list instead of a gender column on Scenario; add the column if admins create many new names.
+const MALE_NAMES = new Set([
+  "გიორგი", "ლევანი", "დავითი", "დავით", "ზურაბი", "ირაკლი", "ნიკა", "ლუკა", "ბექა", "გოგა", "საბა", "რატი", "ალექსი", "გურამი", "ბაჩო",
+  "ნიკოლოზი", "ლაშა", "გიგა", "დათო", "ვახო", "სანდრო", "თორნიკე", "ოთარი", "ლადო", "მიშა", "ბესო", "ზაზა", "კოტე", "ტატო", "გია",
+  "giorgi", "levani", "levan", "davit", "david", "zurab", "irakli", "nika", "luka", "beka", "goga", "saba", "rati", "aleksi", "alex",
+  "guram", "bacho", "lasha", "giga", "dato", "sandro", "tornike", "otar", "lado", "misha", "zaza", "gia", "john", "michael", "mark", "tom",
+]);
+export const isMaleName = (name: string) => MALE_NAMES.has(name.trim().split(/\s+/)[0].toLowerCase());
+// Gemini Live prebuilt voices: Charon/Puck are male, Kore/Aoede female.
+export const voiceFor = (name: string) => (isMaleName(name) ? "Charon" : "Kore");
 
 const DIFFICULTY_NOTE: Record<Difficulty, string> = {
   EASY: "Be friendly and fairly easy to convince.",
@@ -22,16 +36,19 @@ const DIFFICULTY_NOTE: Record<Difficulty, string> = {
 
 export function personaPrompt(s: Scenario, difficulty: Difficulty, locale: string, product?: CustomProduct | null) {
   const lang = locale === "ka" ? "Georgian" : "English";
+  const male = isMaleName(s.customerName);
   return [
-    "You are role-playing a CUSTOMER on a sales phone call. The user is the SELLER practicing their pitch.",
+    `You are ${s.customerName}, a real ${male ? "man" : "woman"} who just picked up a sales phone call. The user is the SELLER calling you. You are NOT an assistant.`,
     locale === "ka" ? s.personaPromptKa : s.personaPromptEn,
     product &&
       `The product being sold: "${product.name}" — ${product.description}. Price: ${product.price}. You are a typical "${product.target}" customer.`,
     DIFFICULTY_NOTE[difficulty],
-    "You have a name, a personality, a budget, real pain points, hidden objections and one buying trigger. Reveal the hidden objections only when the seller asks good questions.",
-    "Stay in character the whole call. Never coach the seller, never mention you are an AI. Keep replies short (1-3 sentences) like a real phone call.",
-    "Only agree to buy if the seller has earned it.",
-    `Speak only ${lang}.`,
+    "Before the call, silently decide: your job and daily situation, your budget, 2 real pain points, 2 hidden objections, and 1 thing that would make you buy. Keep them consistent for the whole call.",
+    "Talk like a real person on the phone: short spoken sentences (usually 1-2, never more than 3), casual words, small reactions like \"mhm\", \"wait\", \"hmm\", \"honestly…\". No lists, no formal or written style, no long explanations.",
+    "React to exactly what the seller just said. If they are vague, ask what they mean. If they talk too long, cut in. If they ask a good question, answer honestly and reveal a pain point. Reveal hidden objections only when the seller digs for them.",
+    "You are busy and a little skeptical at first. Never help the seller sell, never summarize, never give advice, never say you are an AI or a role-play, never offer to help.",
+    "Do not buy because of one nice sentence. Agree to buy (or to a clear next step) only after the seller understood your needs, showed value for YOUR situation and handled your objections. If they handled you badly, end politely: you're not interested.",
+    `Speak only ${lang}${locale === "ka" ? ", natural spoken Georgian as people in Tbilisi talk, with correct grammar for your gender" : ""}.`,
   ]
     .filter(Boolean)
     .join("\n");
@@ -76,7 +93,7 @@ export async function coachHint(transcript: Line[], locale: string, live = false
     const res = await client().models.generateContent({
       model: TEXT_MODEL,
       contents: live
-        ? `You are a sales coach. Here is a sales call so far:\n${fmt(transcript)}\n\nWrite the exact next sentence the SELLER should say to the customer (max 30 words), in the seller's own voice. No quotes, no preamble. Answer in ${locale === "ka" ? "Georgian" : "English"}.`
+        ? `A sales call so far:\n${fmt(transcript)}\n\nWrite ONLY the words the SELLER should say next to the customer: one short spoken sentence, max 15 words, that answers what the customer just said and moves toward the sale (ask a sharp question, handle the objection, or ask for the next step). Not advice, not "you should…", no quotes, no labels. ${locale === "ka" ? "Georgian" : "English"}.`
         : `You are a sales coach. Here is a sales call so far:\n${fmt(transcript)}\n\nGive the SELLER one short, concrete tip (max 25 words) for their next line. Answer in ${locale === "ka" ? "Georgian" : "English"}.`,
       config: NO_THINKING,
     });
@@ -143,16 +160,16 @@ wellDone: exactly 3 things done well. improve: exactly 3 things to improve.
 rewrite: rewrite the seller's weakest moment as a better line.
 Write all text in ${locale === "ka" ? "Georgian" : "English"}.`;
   // Two tries (503 overloads are short-lived), then the heuristic so an ended call always gets a score.
-  for (let attempt = 1; attempt <= 2; attempt++) {
+  for (const model of SMART_MODELS) {
     try {
       const res = await client().models.generateContent({
-        model: TEXT_MODEL,
+        model,
         contents: prompt,
         config: { responseMimeType: "application/json", responseSchema: SCORE_SCHEMA, ...NO_THINKING },
       });
       return parseScore(res.text ?? "");
     } catch (e) {
-      console.error(`scoreCall attempt ${attempt} failed`, e);
+      console.error(`scoreCall with ${model} failed`, e);
     }
   }
   return heuristicScore(transcript, locale);
@@ -160,7 +177,7 @@ Write all text in ${locale === "ka" ? "Georgian" : "English"}.`;
 
 // One-use ephemeral token so the browser can open a Gemini Live session without seeing our API key.
 // The persona is locked into the token, so the client can't change it.
-export async function liveToken(system: string, maxSec: number, locale: string) {
+export async function liveToken(system: string, maxSec: number, locale: string, voiceName: string) {
   const token = await client().authTokens.create({
     config: {
       uses: 1,
@@ -173,7 +190,7 @@ export async function liveToken(system: string, maxSec: number, locale: string) 
           systemInstruction: system,
           inputAudioTranscription: {},
           outputAudioTranscription: {},
-          speechConfig: { languageCode: locale === "ka" ? "ka-GE" : "en-US" },
+          speechConfig: { languageCode: locale === "ka" ? "ka-GE" : "en-US", voiceConfig: { prebuiltVoiceConfig: { voiceName } } },
         },
       },
       lockAdditionalFields: [],
