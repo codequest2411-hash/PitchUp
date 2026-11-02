@@ -17,7 +17,7 @@ steps:
       - --image=$_REGION-docker.pkg.dev/$PROJECT_ID/pitchup/app:$BUILD_ID
       - --region=$_REGION
       - --allow-unauthenticated
-      - --set-secrets=DATABASE_URL=DATABASE_URL:latest,DIRECT_URL=DIRECT_URL:latest,FIREBASE_SERVICE_ACCOUNT=FIREBASE_SERVICE_ACCOUNT:latest,FLITT_SECRET_KEY=FLITT_SECRET_KEY:latest,GEMINI_API_KEY=GEMINI_API_KEY:latest
+      - --set-secrets=DATABASE_URL=DATABASE_URL:latest,DIRECT_URL=DIRECT_URL:latest,SESSION_SECRET=SESSION_SECRET:latest,FLITT_SECRET_KEY=FLITT_SECRET_KEY:latest,GEMINI_API_KEY=GEMINI_API_KEY:latest
       - --env-vars-file=env.cloudrun.yaml
 images:
   - $_REGION-docker.pkg.dev/$PROJECT_ID/pitchup/app:$BUILD_ID

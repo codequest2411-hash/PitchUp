@@ -45,3 +45,6 @@ env.cloudrun.yaml
 
 # Local Netlify folder
 .netlify
+
+.vercel
+.env*

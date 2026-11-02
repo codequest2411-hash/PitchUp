@@ -1,14 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { adminAuth } from "@/lib/firebase-admin";
-import { devLoginEnabled, isAdminEmail, SESSION_COOKIE } from "@/lib/auth";
+import { createSessionCookie, devLoginEnabled, isAdminEmail, SESSION_COOKIE, SESSION_MAX_AGE, verifySupabaseToken } from "@/lib/auth";
 
 const Body = z.union([
-  z.object({ idToken: z.string().min(10), name: z.string().max(80).optional() }),
+  z.object({ accessToken: z.string().min(10), name: z.string().max(80).optional() }),
   z.object({ dev: z.enum(["student", "admin"]) }),
 ]);
-const MAX_AGE = 60 * 60 * 24 * 5; // 5 days, Firebase's max is 14
 
 export async function POST(req: Request) {
   const parsed = Body.safeParse(await req.json().catch(() => null));
@@ -22,15 +20,17 @@ export async function POST(req: Request) {
     email = `${body.dev}@pitchup.local`;
     name = body.dev === "admin" ? "Demo Admin" : "Demo Student";
   } else {
-    try {
-      const decoded = await adminAuth().verifyIdToken(body.idToken);
-      uid = decoded.uid;
-      email = decoded.email;
-      name = body.name || decoded.name;
-      avatarUrl = decoded.picture;
-      cookie = await adminAuth().createSessionCookie(body.idToken, { expiresIn: MAX_AGE * 1000 });
-    } catch {
-      return NextResponse.json({ error: "invalid token" }, { status: 401 });
+    const su = await verifySupabaseToken(body.accessToken);
+    if (!su) return NextResponse.json({ error: "invalid token" }, { status: 401 });
+    uid = su.id;
+    email = su.email;
+    name = body.name || su.user_metadata?.full_name || su.user_metadata?.name;
+    avatarUrl = su.user_metadata?.avatar_url;
+    cookie = createSessionCookie(uid);
+    // Carry over accounts made with the old Firebase login, but only for a verified email.
+    if (email && su.email_confirmed_at && !(await db.user.findUnique({ where: { firebaseUid: uid } }))) {
+      const old = await db.user.findFirst({ where: { email, NOT: { firebaseUid: { startsWith: "dev:" } } } });
+      if (old) await db.user.update({ where: { id: old.id }, data: { firebaseUid: uid } });
     }
   }
 
@@ -38,13 +38,13 @@ export async function POST(req: Request) {
   const user = await db.user.upsert({
     where: { firebaseUid: uid },
     create: { firebaseUid: uid, email, name: name ?? email?.split("@")[0], avatarUrl, role: admin ? "ADMIN" : "STUDENT" },
-    update: { email, avatarUrl, ...(admin ? { role: "ADMIN" as const } : {}) },
+    update: { email, ...(avatarUrl ? { avatarUrl } : {}), ...(admin ? { role: "ADMIN" as const } : {}) },
   });
   if (user.banned) return NextResponse.json({ error: "banned" }, { status: 403 });
 
   const res = NextResponse.json({ ok: true, locale: user.locale });
   res.cookies.set(SESSION_COOKIE, cookie, {
-    httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: MAX_AGE,
+    httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: SESSION_MAX_AGE,
   });
   return res;
 }

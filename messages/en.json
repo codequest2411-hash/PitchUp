@@ -118,8 +118,9 @@
     "haveAccount": "Already have an account?",
     "or": "or",
     "failed": "Sign-in failed. Check your details and try again.",
+    "checkEmail": "Check your inbox and click the link to confirm your email, then you're in.",
     "devTitle": "Developer login",
-    "devText": "Firebase isn't configured, so you can log in as a demo user (local development only).",
+    "devText": "Supabase isn't configured, so you can log in as a demo user (local development only).",
     "devStudent": "Log in as demo student",
     "devAdmin": "Log in as demo admin"
   },

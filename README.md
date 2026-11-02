@@ -2,7 +2,7 @@
 
 Learn to sell by talking to an AI customer. Pick a profession, call a realistic AI customer (voice or text), handle objections, close — and get scored on 6 skills. Levels, XP, badges, free + paid courses, English + Georgian.
 
-**Stack:** Next.js 15 (App Router) · Tailwind 4 · next-intl (`/ka`, `/en`) · Prisma + Supabase (PostgreSQL) · Firebase Auth (Google + email) · Gemini Live (voice) + Gemini (text, scoring) · Flitt (payments) · Cloud Run.
+**Stack:** Next.js 15 (App Router) · Tailwind 4 · next-intl (`/ka`, `/en`) · Prisma + Supabase (PostgreSQL) · Supabase Auth (Google + email) · Gemini Live (voice) + Gemini (text, scoring) · Flitt (payments) · Vercel.
 
 ## Run locally
 
@@ -18,7 +18,7 @@ With no keys set, the site still works end-to-end:
 
 | Missing key | What happens |
 |---|---|
-| Firebase | Login page shows **"Log in as demo student / demo admin"** (dev only, never in production) |
+| Supabase Auth (`SUPABASE_URL`) | Login page shows **"Log in as demo student / demo admin"** (dev only, never in production) |
 | `GEMINI_API_KEY` | Calls run in text mode with canned customer replies; scoring uses a simple heuristic |
 | Flitt | Buy buttons show "not configured" |
 
@@ -58,13 +58,13 @@ gcloud artifacts repositories create pitchup --repository-format=docker --locati
 
 Billing must be enabled on the project (Console → Billing).
 
-### 2. Firebase Authentication
+### 2. Supabase Authentication
 
-1. Go to https://console.firebase.google.com → **Add project** → choose the existing `pitchup-prod`.
-2. **Build → Authentication → Sign-in method**: enable **Google** and **Email/Password**.
-3. **Authentication → Settings → Authorized domains**: add `localhost`, your Cloud Run URL (`pitchup-xxxx.a.run.app`) and your domain.
-4. **Project settings → General → Your apps → Web app**: copy `apiKey`, `authDomain`, `projectId`, `appId` into `env.cloudrun.yaml` (copy from `env.cloudrun.example.yaml`).
-5. **Project settings → Service accounts → Generate new private key**: you'll store this JSON as a secret in step 5.
+1. Supabase dashboard → **Project Settings → API**: copy the project URL and the `anon` public key into `SUPABASE_URL` / `SUPABASE_ANON_KEY`. Optional: the `service_role` key into `SUPABASE_SERVICE_ROLE_KEY` (secret; lets account deletion remove the login too).
+2. Set `SESSION_SECRET` to a random string (`openssl rand -base64 32`).
+3. **Authentication → URL Configuration**: Site URL = your domain; Redirect URLs: `https://YOUR_DOMAIN/**` and `http://localhost:3000/**`.
+4. Email/password works out of the box (users confirm their email by link).
+5. Google: create an OAuth client (Google Cloud Console → APIs & Services → Credentials → OAuth client ID → Web) with redirect URI `https://YOUR_REF.supabase.co/auth/v1/callback`, then paste its ID and secret in **Authentication → Providers → Google**. The Google button appears automatically once it's enabled.
 
 ### 3. OAuth consent screen
 
@@ -88,14 +88,14 @@ npx prisma migrate deploy
 npx prisma db seed
 ```
 
-The app reaches Supabase only through Prisma on the server; Supabase Auth/Storage are not used (auth is Firebase), and the browser never connects to the database.
+The app reaches Supabase only through Prisma on the server; the browser only talks to Supabase Auth to log in, never to the database.
 
 ### 5. Secrets
 
 ```bash
 printf '%s' 'SUPABASE_POOLED_URL_6543' | gcloud secrets create DATABASE_URL --data-file=-
 printf '%s' 'SUPABASE_DIRECT_URL_5432' | gcloud secrets create DIRECT_URL --data-file=-
-gcloud secrets create FIREBASE_SERVICE_ACCOUNT --data-file=service-account.json
+printf '%s' "$(openssl rand -base64 32)" | gcloud secrets create SESSION_SECRET --data-file=-
 printf '%s' 'FLITT_SECRET'        | gcloud secrets create FLITT_SECRET_KEY --data-file=-
 printf '%s' 'AIza...'             | gcloud secrets create GEMINI_API_KEY --data-file=-
 ```
@@ -134,7 +134,7 @@ Testing: merchant `1549901`, secret `test`, card `4444 5555 6666 1111` (any expi
 gcloud beta run domain-mappings create --service=pitchup --domain=pitchup.ge --region=europe-west3
 ```
 
-Add the DNS records it prints at your registrar. HTTPS certificates are issued automatically. Then update `APP_URL`, and Firebase authorized domains.
+Add the DNS records it prints at your registrar. HTTPS certificates are issued automatically. Then update `APP_URL` and the Supabase redirect URLs.
 
 ## Admin
 
