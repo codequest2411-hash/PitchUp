@@ -31,11 +31,13 @@ export async function Header({ locale }: { locale: string }) {
   );
 
   return (
-    <header className="sticky top-0 z-20 border-b border-line bg-card/90 backdrop-blur">
+    <header className="sticky top-0 z-20 border-b border-line/70 bg-bg/80 backdrop-blur-xl">
       <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3">
         <Link href="/" className="shrink-0" aria-label={t("appName")}>
-          <Image src="/logo.svg" alt={t("appName")} width={130} height={36} priority className="dark:hidden" />
-          <Image src="/logo-white.svg" alt={t("appName")} width={130} height={36} priority className="hidden dark:block" />
+          <span className="flex items-center gap-2 text-lg font-semibold tracking-tight">
+            <Image src="/logo-mark.svg" alt="" width={30} height={30} priority />
+            <span>Pitch<span className="text-brand">Up</span></span>
+          </span>
         </Link>
         <nav className="hidden flex-1 items-center gap-1 xl:flex">
           {links.map(([href, label]) => (

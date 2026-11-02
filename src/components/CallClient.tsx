@@ -81,7 +81,7 @@ export function CallClient(p: Props) {
         const w = c.width / hist.length;
         hist.forEach((h, i) => {
           const bh = Math.max(3, h * c.height);
-          g.fillStyle = v?.aiSpeaking() ? "#FF7A1A" : "#8C80FF";
+          g.fillStyle = v?.aiSpeaking() ? "#E8551C" : "#7D8BFF";
           g.fillRect(i * w + 1, (c.height - bh) / 2, w - 2, bh);
         });
       }
@@ -157,11 +157,11 @@ export function CallClient(p: Props) {
   const statusText = status === "connecting" ? t("connecting") : status === "ending" ? t("scoring") : status === "idle" ? "" : mode === "voice" ? (speaking ? t("speaking") : t("listening")) : t("live");
 
   return (
-    <div className="mx-auto max-w-2xl overflow-hidden rounded-3xl bg-[#0f0c24] text-white shadow-2xl">
+    <div className="mx-auto max-w-2xl overflow-hidden rounded-3xl bg-[#0b0d17] text-white shadow-2xl">
       <div className="flex flex-col items-center gap-4 px-6 pb-6 pt-10">
         <div className="relative flex h-36 w-36 items-center justify-center">
-          {(speaking || status === "connecting") && <span className="absolute inset-0 animate-ping rounded-full bg-[#FF7A1A]/40" />}
-          <span className={`relative flex h-32 w-32 items-center justify-center rounded-full bg-[#3B2DB8] text-5xl font-bold ring-4 ${speaking ? "ring-[#FF7A1A]" : "ring-white/10"}`}>
+          {(speaking || status === "connecting") && <span className="absolute inset-0 animate-ping rounded-full bg-[#E8551C]/40" />}
+          <span className={`relative flex h-32 w-32 items-center justify-center rounded-full bg-[#2B44E6] text-5xl font-bold ring-4 ${speaking ? "ring-[#E8551C]" : "ring-white/10"}`}>
             {p.customerName[0]}
           </span>
         </div>
@@ -175,10 +175,10 @@ export function CallClient(p: Props) {
         <p className="h-5 text-sm text-white/70" aria-live="polite">{statusText}</p>
         <canvas ref={canvas} width={320} height={48} className="h-12 w-full max-w-xs" aria-hidden />
         {notice && <p role="status" className="rounded-xl bg-white/10 px-4 py-2 text-center text-sm">{notice}</p>}
-        {hint && <p role="status" className="rounded-xl bg-[#FF7A1A]/20 px-4 py-2 text-center text-sm">💡 {hint}</p>}
+        {hint && <p role="status" className="rounded-xl bg-[#E8551C]/20 px-4 py-2 text-center text-sm">💡 {hint}</p>}
 
         {status === "idle" ? (
-          <button onClick={connect} className="btn bg-[#3ccf7f] px-8 py-4 text-lg text-[#0f0c24]">📞 {t("start")}</button>
+          <button onClick={connect} className="btn bg-[#3ccf7f] px-8 py-4 text-lg text-[#0b0d17]">📞 {t("start")}</button>
         ) : (
           <div className="flex flex-wrap justify-center gap-3">
             {mode === "voice" && (
@@ -203,7 +203,7 @@ export function CallClient(p: Props) {
             {lines.length === 0 && <p className="text-center text-sm text-white/50">{t("startHint")}</p>}
             {lines.map((l, i) => (
               <div key={i} className={`flex ${l.role === "user" ? "justify-end" : ""}`}>
-                <p className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm ${l.role === "user" ? "bg-[#3B2DB8]" : "bg-white/10"}`}>
+                <p className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm ${l.role === "user" ? "bg-[#2B44E6]" : "bg-white/10"}`}>
                   <span className="block text-xs opacity-60">{l.role === "user" ? t("you") : p.customerName}</span>
                   {l.text}
                 </p>
@@ -214,8 +214,8 @@ export function CallClient(p: Props) {
             <form onSubmit={send} className="flex gap-2 border-t border-white/10 p-3">
               <label htmlFor="msg" className="sr-only">{t("placeholder")}</label>
               <input id="msg" value={input} onChange={(e) => setInput(e.target.value)} maxLength={1000} autoFocus autoComplete="off"
-                placeholder={t("placeholder")} className="flex-1 rounded-xl bg-white/10 px-4 py-3 text-white placeholder:text-white/40 focus:outline-2 focus:outline-[#8C80FF]" />
-              <button disabled={sending || !input.trim()} className="btn bg-[#FF7A1A]">{t("send")}</button>
+                placeholder={t("placeholder")} className="flex-1 rounded-xl bg-white/10 px-4 py-3 text-white placeholder:text-white/40 focus:outline-2 focus:outline-[#7D8BFF]" />
+              <button disabled={sending || !input.trim()} className="btn bg-[#E8551C]">{t("send")}</button>
             </form>
           )}
         </div>

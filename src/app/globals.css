@@ -3,27 +3,28 @@
 @custom-variant dark (@media (prefers-color-scheme: dark));
 
 :root {
-  --bg: #f7f7fb;
+  --bg: #fafaf7;
   --card: #ffffff;
-  --fg: #16142b;
-  --muted: #5d5a75;
-  --line: #e4e2ef;
-  --brand: #3b2db8;
+  --fg: #0b0d17;
+  --muted: #5b6070;
+  --line: #e7e7e1;
+  --brand: #2b44e6;
   --brand-fg: #ffffff;
-  --accent: #ff7a1a;
-  --ok: #138a4a;
-  --bad: #c5303b;
+  --accent: #e8551c;
+  --ok: #0f7b55;
+  --bad: #d1343f;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0f0d1c;
-    --card: #1a1830;
-    --fg: #efeefa;
-    --muted: #a9a6c4;
-    --line: #2e2b4a;
-    --brand: #8c80ff;
-    --brand-fg: #0f0d1c;
-    --ok: #3ccf7f;
+    --bg: #0b0d14;
+    --card: #12151f;
+    --fg: #f2f3f7;
+    --muted: #9aa0b2;
+    --line: #242939;
+    --brand: #7d8bff;
+    --brand-fg: #0b0d14;
+    --accent: #ff8a5b;
+    --ok: #3ccf91;
     --bad: #ff6b74;
   }
 }
@@ -39,31 +40,35 @@
   --color-accent: var(--accent);
   --color-ok: var(--ok);
   --color-bad: var(--bad);
-  --font-sans: var(--font-inter), var(--font-georgian), system-ui, sans-serif;
+  --font-sans: var(--font-geist), var(--font-georgian), system-ui, sans-serif;
 }
 
 body {
   background: var(--bg);
   color: var(--fg);
+  font-feature-settings: "ss01", "cv11";
+}
+::selection {
+  background: color-mix(in srgb, var(--brand) 22%, transparent);
 }
 
 @utility card {
-  @apply rounded-2xl border border-line bg-card p-5 shadow-sm;
+  @apply rounded-2xl border border-line bg-card p-5 shadow-[0_1px_2px_rgb(16_24_40/0.04)];
 }
 @utility btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:opacity-50 disabled:cursor-not-allowed;
+  @apply inline-flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:opacity-50 disabled:cursor-not-allowed;
 }
 @utility btn-primary {
-  @apply btn bg-brand text-brand-fg hover:opacity-90;
+  @apply btn bg-brand text-brand-fg shadow-[inset_0_1px_0_rgb(255_255_255/0.18)] hover:brightness-110;
 }
 @utility btn-accent {
-  @apply btn bg-accent text-white hover:opacity-90;
+  @apply btn bg-fg text-bg hover:opacity-85;
 }
 @utility btn-ghost {
-  @apply btn border border-line bg-card hover:bg-bg;
+  @apply btn border border-line bg-card hover:border-fg/20 hover:bg-bg;
 }
 @utility input {
-  @apply w-full rounded-xl border border-line bg-card px-3 py-2.5 text-fg focus:outline-2 focus:outline-brand;
+  @apply w-full rounded-xl border border-line bg-card px-3.5 py-2.5 text-fg transition placeholder:text-muted/60 focus:border-brand focus:outline-none focus:ring-4 focus:ring-brand/15;
 }
 @utility label {
   @apply mb-1 block text-sm font-medium text-muted;
@@ -72,8 +77,11 @@ body {
   @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold;
 }
 @utility h1 {
-  @apply text-3xl font-extrabold tracking-tight sm:text-4xl;
+  @apply text-3xl font-semibold tracking-[-0.03em] text-balance sm:text-4xl;
 }
 @utility h2 {
-  @apply text-xl font-bold;
+  @apply text-xl font-semibold tracking-tight;
+}
+@utility eyebrow {
+  @apply inline-flex items-center gap-2 rounded-full border border-line bg-card px-3 py-1 text-xs font-medium text-muted;
 }

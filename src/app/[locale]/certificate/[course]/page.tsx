@@ -19,11 +19,11 @@ export default async function Page({ params }: { params: Promise<{ locale: strin
 
   return (
     <div className="space-y-4">
-      <div className="mx-auto max-w-3xl space-y-6 rounded-3xl border-8 border-double border-brand bg-white p-10 text-center text-[#16142b] print:border-4">
+      <div className="mx-auto max-w-3xl space-y-6 rounded-3xl border-8 border-double border-brand bg-white p-10 text-center text-[#0b0d17] print:border-4">
         <Image src="/logo.svg" alt="PitchUp" width={160} height={44} className="mx-auto" />
         <h1 className="text-3xl font-extrabold">{t("title")}</h1>
         <p className="text-lg">{t("body", { name: user.name ?? user.email ?? "" })}</p>
-        <p className="text-2xl font-bold text-[#3B2DB8]">{tr(course, "title", locale)}</p>
+        <p className="text-2xl font-bold text-[#2B44E6]">{tr(course, "title", locale)}</p>
         <p className="text-sm text-gray-500">{enrollment.completedAt.toLocaleDateString(locale === "ka" ? "ka-GE" : "en-US")}</p>
       </div>
       <div className="text-center print:hidden"><PrintButton label={t("print")} /></div>

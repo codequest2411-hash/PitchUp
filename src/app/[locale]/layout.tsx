@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Noto_Sans_Georgian } from "next/font/google";
+import { Geist, Noto_Sans_Georgian } from "next/font/google";
 import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getMessages, getTranslations, setRequestLocale } from "next-intl/server";
@@ -11,7 +11,7 @@ import "../globals.css";
 const CLIENT_NAMESPACES = ["common", "auth", "practice", "difficulty", "lesson", "call"];
 const pick = (m: Record<string, unknown>, keys: string[]) => Object.fromEntries(keys.map((k) => [k, m[k]]));
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+const geist = Geist({ subsets: ["latin"], variable: "--font-geist" });
 const georgian = Noto_Sans_Georgian({ subsets: ["georgian"], variable: "--font-georgian" });
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
@@ -26,7 +26,7 @@ export default async function LocaleLayout({ children, params }: { children: Rea
 
   return (
     <html lang={locale}>
-      <body className={`${inter.variable} ${georgian.variable} flex min-h-screen flex-col font-sans antialiased`}>
+      <body className={`${geist.variable} ${georgian.variable} flex min-h-screen flex-col font-sans antialiased`}>
         {/* Only the namespaces client components use, instead of every translation on every page. */}
         <NextIntlClientProvider messages={pick(await getMessages(), CLIENT_NAMESPACES)}>
           <Header locale={locale} />

@@ -15,10 +15,10 @@ export async function PricingCards({ currency = "gel", loggedIn, pro }: { curren
   return (
     <div className="grid gap-5 md:grid-cols-3">
       {plans.map((p) => (
-        <div key={p.id} className={`card flex flex-col gap-4 ${"best" in p ? "ring-2 ring-accent" : ""}`}>
+        <div key={p.id} className={`card flex flex-col gap-4 ${"best" in p ? "border-fg/80 ring-1 ring-fg/80 shadow-[0_24px_48px_-24px_rgb(16_24_40/0.3)]" : ""}`}>
           <div className="flex items-center justify-between">
             <h3 className="h2">{p.name}</h3>
-            {"hint" in p && <span className={`chip ${"best" in p ? "bg-accent text-white" : "bg-bg text-muted"}`}>{p.hint}</span>}
+            {"hint" in p && <span className={`chip ${"best" in p ? "bg-fg text-bg" : "bg-bg text-muted"}`}>{p.hint}</span>}
           </div>
           <p><span className="text-4xl font-extrabold">{p.price}</span> <span className="text-muted">{p.per}</span></p>
           <ul className="flex-1 space-y-2 text-sm">

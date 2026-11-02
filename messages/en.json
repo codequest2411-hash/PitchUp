@@ -75,6 +75,10 @@
     "none": "No badges yet — finish a call to earn one."
   },
   "landing": {
+    "heroEyebrow": "AI sales-call trainer",
+    "mockAi": "“Honestly, it’s a bit expensive for us right now.”",
+    "mockYou": "“Fair. What does it cost you each month to keep losing those leads?”",
+    "mockScore": "Objection handling",
     "heroTitle": "Learn to sell by talking to an AI customer",
     "heroSub": "Pick your profession, call a realistic AI customer, handle objections and close the deal. Get scored instantly and level up.",
     "ctaStart": "Start for free",
