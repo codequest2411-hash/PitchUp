@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { createClient, type Session } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { Link } from "@/i18n/navigation";
 import type { SupabaseWebConfig } from "@/lib/auth";
 
@@ -23,6 +23,7 @@ export function AuthForm({ mode, config, dev }: { mode: Mode; config: SupabaseWe
   const [error, setError] = useState(false);
   const [busy, setBusy] = useState(false);
   const [checkEmail, setCheckEmail] = useState(false);
+  const [showPass, setShowPass] = useState(false);
 
   // Coming back from Google or from the email-confirmation link: tokens arrive in the URL hash.
   useEffect(() => {
@@ -57,15 +58,24 @@ export function AuthForm({ mode, config, dev }: { mode: Mode; config: SupabaseWe
     const { data, error } = mode === "register"
       ? await auth.signUp({ email: mail, password: pass, options: { data: { full_name: name || undefined }, emailRedirectTo: `${window.location.origin}${window.location.pathname.replace(/register$/, "login")}` } })
       : await auth.signInWithPassword({ email: mail, password: pass });
+    if (error?.code === "email_not_confirmed" || (!error && !data.session)) return waitForConfirmation(auth, mail, pass, name);
     if (error) throw error;
-    const session: Session | null = data.session;
-    if (!session) {
-      // Email confirmation is on: the user finishes by clicking the link in their inbox.
-      setCheckEmail(true);
-      setBusy(false);
-      return;
-    }
-    await startSession({ accessToken: session.access_token, name: name || undefined });
+    await startSession({ accessToken: data.session!.access_token, name: name || undefined });
+  }
+
+  // Email confirmation is on. If the link is opened elsewhere (e.g. on the phone), this tab logs in by
+  // itself: it retries the same credentials until Supabase accepts them. 15 s keeps under Supabase's sign-in rate limit.
+  function waitForConfirmation(auth: SupabaseClient["auth"], mail: string, pass: string, name: string) {
+    setCheckEmail(true);
+    setBusy(false);
+    const until = Date.now() + 30 * 60_000;
+    const timer = setInterval(async () => {
+      if (Date.now() > until) return clearInterval(timer);
+      const { data } = await auth.signInWithPassword({ email: mail, password: pass });
+      if (!data.session) return;
+      clearInterval(timer);
+      run(() => startSession({ accessToken: data.session.access_token, name: name || undefined }));
+    }, 15_000);
   }
 
   return (
@@ -86,7 +96,15 @@ export function AuthForm({ mode, config, dev }: { mode: Mode; config: SupabaseWe
               <div><label className="label" htmlFor="name">{t("name")}</label><input id="name" name="name" className="input" autoComplete="name" /></div>
             )}
             <div><label className="label" htmlFor="email">{t("email")}</label><input id="email" name="email" type="email" required className="input" autoComplete="email" /></div>
-            <div><label className="label" htmlFor="password">{t("password")}</label><input id="password" name="password" type="password" required minLength={6} className="input" autoComplete={mode === "login" ? "current-password" : "new-password"} /></div>
+            <div>
+              <label className="label" htmlFor="password">{t("password")}</label>
+              <div className="relative">
+                <input id="password" name="password" type={showPass ? "text" : "password"} required minLength={6} className="input pr-16" autoComplete={mode === "login" ? "current-password" : "new-password"} />
+                <button type="button" onClick={() => setShowPass(!showPass)} aria-pressed={showPass} aria-controls="password" className="absolute inset-y-0 right-0 px-3 text-xs font-semibold text-muted hover:text-fg">
+                  {showPass ? t("hidePassword") : t("showPassword")}
+                </button>
+              </div>
+            </div>
             <button className="btn-primary w-full" disabled={busy}>{t("submit")}</button>
           </form>
         </>
