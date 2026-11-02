@@ -14,7 +14,9 @@ async function startSession(body: object) {
   const res = await fetch("/api/auth/session", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
   if (!res.ok) throw new Error();
   const { locale } = await res.json();
-  window.location.href = `/${locale}/dashboard`;
+  // ?next=/live-assist brings the desktop app back to its page; only same-site paths are allowed.
+  const next = new URLSearchParams(window.location.search).get("next");
+  window.location.href = `/${locale}${next && /^\/[\w-]/.test(next) ? next : "/dashboard"}`;
 }
 
 export function AuthForm({ mode, config, dev }: { mode: Mode; config: SupabaseWebConfig | null; dev: boolean }) {

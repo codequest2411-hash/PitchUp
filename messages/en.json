@@ -336,8 +336,34 @@
   },
   "legal": {
     "privacyTitle": "Privacy policy",
-    "privacyBody": "We store your account details (name, email, avatar from Google), your learning progress, call transcripts and scores so the service can work. Payment data is handled by Flitt; we never see your card number. Voice audio is processed by Google Gemini in real time and is not recorded by us unless you agree. You can export or delete your data at any time from your profile.",
+    "privacyBody": "We store your account details (name, email, avatar from Google), your learning progress, call transcripts and scores so the service can work. Payment data is handled by Flitt; we never see your card number. Voice audio is processed by Google Gemini in real time and is not recorded by us unless you agree. You can export or delete your data at any time from your profile. The PitchUp Live desktop app sends the audio of your real calls (your microphone and the other person) to Google Gemini only to transcribe it and suggest replies; we never store that audio, and transcripts stay on your device for the session only.",
     "termsTitle": "Terms of service",
     "termsBody": "PitchUp is a training tool. AI feedback is guidance, not a guarantee of results. Don't use the service for unlawful or abusive content. Pro is prepaid for one month or one year and does not renew automatically. One-time course purchases give lifetime access to that course."
+  },
+  "assist": {
+    "loginText": "Sign in with your PitchUp account to get live reply suggestions during your real calls.",
+    "login": "Log in",
+    "register": "Create account",
+    "consentTitle": "Before you start",
+    "consentText": "PitchUp Live listens to your computer audio (the other person) and your microphone, transcribes the call and suggests what to say. In many countries it is illegal to record or transcribe a call without consent: tell the other person that an AI assistant is transcribing the call.",
+    "consentCheck": "I have told the other person that this call is being transcribed.",
+    "headphones": "Tip: use headphones so your mic does not pick up the other person.",
+    "start": "Start listening",
+    "stop": "Stop listening",
+    "listening": "Listening",
+    "theySpeak": "They are speaking…",
+    "youSpeak": "You are speaking…",
+    "sayThis": "Say this",
+    "waiting": "A suggestion appears after the other person speaks.",
+    "them": "Them",
+    "you": "You",
+    "noAudioStored": "Audio is processed in real time and never stored.",
+    "freeNote": "Free plan: {n} spoken turns per day.",
+    "upgrade": "Upgrade to Pro",
+    "err_limit": "You have used today's free turns.",
+    "err_login": "Your session expired. Please log in again.",
+    "err_noSystem": "Could not capture the computer audio. Allow screen/system audio sharing and try again.",
+    "err_mic": "Microphone access was denied. Allow it in Windows Settings → Privacy → Microphone.",
+    "err_failed": "Something went wrong. Please try again."
   }
 }

@@ -8,7 +8,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import "../globals.css";
 
-const CLIENT_NAMESPACES = ["common", "auth", "practice", "difficulty", "lesson", "call"];
+const CLIENT_NAMESPACES = ["common", "auth", "practice", "difficulty", "lesson", "call", "assist"];
 const pick = (m: Record<string, unknown>, keys: string[]) => Object.fromEntries(keys.map((k) => [k, m[k]]));
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist" });

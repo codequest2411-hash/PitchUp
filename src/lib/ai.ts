@@ -87,6 +87,28 @@ export async function coachHint(transcript: Line[], locale: string, live = false
   }
 }
 
+const ASSIST_SCHEMA = {
+  type: Type.OBJECT,
+  required: ["heard", "reply"],
+  properties: { heard: { type: Type.STRING }, reply: { type: Type.STRING } },
+};
+
+// Desktop "PitchUp Live": one call transcribes the last spoken turn of a REAL call and, after a customer
+// turn, writes the seller's next sentence (one call instead of transcribe + coachHint keeps it ~2s).
+export async function liveAssist(wavBase64: string, speaker: "user" | "ai", transcript: Line[], locale: string) {
+  const lang = locale === "ka" ? "Georgian" : "English";
+  const prompt = speaker === "ai"
+    ? `You help a SELLER during a live sales call. The call so far:\n${fmt(transcript) || "(just started)"}\n\nThe audio is what the CUSTOMER just said. heard: transcribe it word for word in its original language. reply: the exact next sentence the SELLER should say (max 30 words), in the seller's own voice, in the language the customer speaks (if unclear, ${lang}). No quotes, no preamble. If the audio has no speech, return empty strings.`
+    : `The audio is what the SELLER just said on a sales call. heard: transcribe it word for word in its original language (empty if no speech). reply: empty string.`;
+  const res = await client().models.generateContent({
+    model: TEXT_MODEL,
+    contents: [{ role: "user", parts: [{ inlineData: { mimeType: "audio/wav", data: wavBase64 } }, { text: prompt }] }],
+    config: { responseMimeType: "application/json", responseSchema: ASSIST_SCHEMA, ...NO_THINKING },
+  });
+  const out = JSON.parse(res.text ?? "{}");
+  return { heard: String(out.heard ?? "").trim(), reply: speaker === "ai" ? String(out.reply ?? "").trim() : "" };
+}
+
 const fmt = (t: Line[]) => t.map((l) => `${l.role === "user" ? "SELLER" : "CUSTOMER"}: ${l.text}`).join("\n");
 
 const n = { type: Type.NUMBER };

@@ -2,7 +2,7 @@
 import { GoogleGenAI, Modality, type LiveServerMessage } from "@google/genai";
 
 // Converts mic Float32 frames to 16-bit PCM in ~128ms chunks.
-const WORKLET = `
+export const WORKLET = `
 class PcmCapture extends AudioWorkletProcessor {
   constructor() { super(); this.buf = new Int16Array(2048); this.n = 0; }
   process(inputs) {
@@ -17,7 +17,7 @@ class PcmCapture extends AudioWorkletProcessor {
 }
 registerProcessor("pcm-capture", PcmCapture);`;
 
-function toBase64(buf: ArrayBuffer) {
+export function toBase64(buf: ArrayBuffer) {
   let s = "";
   for (const b of new Uint8Array(buf)) s += String.fromCharCode(b);
   return btoa(s);

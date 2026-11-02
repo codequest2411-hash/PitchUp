@@ -6,6 +6,8 @@ import { effectiveLevel } from "./levels";
 export const FREE_CALLS_PER_DAY = 3;
 export const GUEST_CALLS_PER_DAY = 1;
 export const MAX_SEC = { guest: 120, free: 300, pro: 1200 };
+// Spoken turns (customer or seller) per day in the PitchUp Live desktop app; pro cap only guards costs.
+export const LIVE_ASSIST_PER_DAY = { free: 30, pro: 3000 };
 
 export async function isPro(userId: string | undefined) {
   if (!userId) return false;
