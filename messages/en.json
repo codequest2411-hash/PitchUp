@@ -261,7 +261,8 @@
     "current": "Current plan",
     "currency": "Currency",
     "courseNote": "You can also buy single courses on their course page.",
-    "canceled": "Payment canceled."
+    "canceled": "Payment canceled.",
+    "extend": "Extend Pro"
   },
   "profile": {
     "title": "Profile",
@@ -271,7 +272,7 @@
     "billing": "Billing",
     "plan": "Plan",
     "status": "Status",
-    "nextPayment": "Next payment",
+    "nextPayment": "Active until",
     "manage": "Manage subscription & invoices",
     "upgrade": "Upgrade to Pro",
     "purchases": "Purchases",
@@ -319,8 +320,8 @@
   },
   "legal": {
     "privacyTitle": "Privacy policy",
-    "privacyBody": "We store your account details (name, email, avatar from Google), your learning progress, call transcripts and scores so the service can work. Payment data is handled by Stripe; we never see your card number. Voice audio is processed by Google Gemini in real time and is not recorded by us unless you agree. You can export or delete your data at any time from your profile.",
+    "privacyBody": "We store your account details (name, email, avatar from Google), your learning progress, call transcripts and scores so the service can work. Payment data is handled by Flitt; we never see your card number. Voice audio is processed by Google Gemini in real time and is not recorded by us unless you agree. You can export or delete your data at any time from your profile.",
     "termsTitle": "Terms of service",
-    "termsBody": "PitchUp is a training tool. AI feedback is guidance, not a guarantee of results. Don't use the service for unlawful or abusive content. Subscriptions renew automatically until canceled; you can cancel any time from Billing. One-time course purchases give lifetime access to that course."
+    "termsBody": "PitchUp is a training tool. AI feedback is guidance, not a guarantee of results. Don't use the service for unlawful or abusive content. Pro is prepaid for one month or one year and does not renew automatically. One-time course purchases give lifetime access to that course."
   }
 }

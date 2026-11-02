@@ -1,9 +1,11 @@
-import Stripe from "stripe";
+import crypto from "node:crypto";
 import type { User } from "@prisma/client";
 import { db } from "./db";
 
-// All payment-provider code lives here. To add BOG / TBC Pay, implement the same
-// createCheckout / openPortal functions and a webhook route for that provider.
+// All payment-provider code lives here (Flitt hosted checkout, https://docs.flitt.com).
+// Pro is prepaid: each approved payment extends access by one period; nothing auto-renews.
+// shortcut: no Flitt recurring subscriptions (recurring_data signing is undocumented), add once Flitt confirms it.
+// DB columns keep their stripe* names to avoid a migration; they hold Flitt order ids.
 
 export const PLANS = {
   pro_monthly: { gel: 29, usd: 12, interval: "month" as const },
@@ -12,16 +14,21 @@ export const PLANS = {
 export type PlanId = keyof typeof PLANS;
 export type Currency = "gel" | "usd";
 
-export const paymentsConfigured = () => Boolean(process.env.STRIPE_SECRET_KEY);
-export const stripe = () => new Stripe(process.env.STRIPE_SECRET_KEY!);
+export const paymentsConfigured = () => Boolean(process.env.FLITT_MERCHANT_ID && process.env.FLITT_SECRET_KEY);
 const appUrl = () => process.env.APP_URL ?? "http://localhost:3000";
 
-async function customerId(user: User) {
-  if (user.stripeCustomerId) return user.stripeCustomerId;
-  const c = await stripe().customers.create({ email: user.email ?? undefined, name: user.name ?? undefined, metadata: { userId: user.id } });
-  await db.user.update({ where: { id: user.id }, data: { stripeCustomerId: c.id } });
-  return c.id;
+// sha1("secret|v1|v2|...") over non-empty values sorted by key; signature fields excluded.
+export function flittSignature(params: Record<string, unknown>, secret = process.env.FLITT_SECRET_KEY!) {
+  const values = Object.keys(params)
+    .filter((k) => k !== "signature" && k !== "response_signature_string")
+    .sort()
+    .map((k) => params[k])
+    .filter((v) => v !== undefined && v !== null && v !== "")
+    .map(String);
+  return crypto.createHash("sha1").update([secret, ...values].join("|")).digest("hex");
 }
+
+type Meta = { userId: string; plan?: PlanId; courseId?: string };
 
 export async function createCheckout(
   user: User,
@@ -29,86 +36,73 @@ export async function createCheckout(
   currency: Currency,
   locale: string,
 ) {
-  const base = { customer: await customerId(user), client_reference_id: user.id, locale: (locale === "ka" ? "auto" : "en") as "auto" | "en" };
+  let amount: number, desc: string, back: string;
+  const meta: Meta = { userId: user.id };
   if (item.kind === "plan") {
     const p = PLANS[item.plan];
-    const session = await stripe().checkout.sessions.create({
-      ...base,
-      mode: "subscription",
-      line_items: [{ quantity: 1, price_data: { currency, unit_amount: p[currency] * 100, recurring: { interval: p.interval }, product_data: { name: `PitchUp Pro (${p.interval})` } } }],
-      metadata: { userId: user.id, plan: item.plan },
-      subscription_data: { metadata: { userId: user.id, plan: item.plan } },
-      success_url: `${appUrl()}/${locale}/profile/billing?success=1`,
-      cancel_url: `${appUrl()}/${locale}/pricing?canceled=1`,
-    });
-    return session.url!;
+    amount = p[currency];
+    desc = `PitchUp Pro (1 ${p.interval})`;
+    back = `/${locale}/profile/billing?success=1`;
+    meta.plan = item.plan;
+  } else {
+    const course = await db.course.findUniqueOrThrow({ where: { id: item.courseId } });
+    amount = currency === "gel" ? course.priceGel : course.priceUsd;
+    desc = course.titleEn;
+    back = `/${locale}/courses/${course.slug}?success=1`;
+    meta.courseId = course.id;
   }
-  const course = await db.course.findUniqueOrThrow({ where: { id: item.courseId } });
-  const session = await stripe().checkout.sessions.create({
-    ...base,
-    mode: "payment",
-    line_items: [{ quantity: 1, price_data: { currency, unit_amount: (currency === "gel" ? course.priceGel : course.priceUsd) * 100, product_data: { name: course.titleEn } } }],
-    metadata: { userId: user.id, courseId: course.id },
-    success_url: `${appUrl()}/${locale}/courses/${course.slug}?success=1`,
-    cancel_url: `${appUrl()}/${locale}/courses/${course.slug}`,
-  });
-  return session.url!;
-}
-
-export async function openPortal(user: User, locale: string) {
-  const s = await stripe().billingPortal.sessions.create({ customer: await customerId(user), return_url: `${appUrl()}/${locale}/profile/billing` });
-  return s.url;
-}
-
-async function saveSubscription(sub: Stripe.Subscription) {
-  const userId = sub.metadata.userId;
-  if (!userId) return;
-  // Newer Stripe API versions moved current_period_end onto subscription items.
-  const end = sub.items.data[0]?.current_period_end ?? (sub as unknown as { current_period_end: number }).current_period_end;
-  const data = {
-    userId,
-    stripeCustomerId: String(sub.customer),
-    plan: sub.metadata.plan ?? "pro_monthly",
-    status: sub.status,
-    currentPeriodEnd: new Date(end * 1000),
+  const request: Record<string, unknown> = {
+    version: "1.0.1",
+    merchant_id: Number(process.env.FLITT_MERCHANT_ID),
+    order_id: `pitchup_${crypto.randomUUID()}`,
+    order_desc: desc,
+    amount: amount * 100,
+    currency: currency.toUpperCase(),
+    lang: locale === "ka" ? "ka" : "en",
+    sender_email: user.email ?? undefined,
+    merchant_data: JSON.stringify(meta),
+    response_url: `${appUrl()}/api/flitt/return?to=${encodeURIComponent(back)}`,
+    server_callback_url: `${appUrl()}/api/flitt/callback`,
   };
-  await db.subscription.upsert({ where: { stripeSubId: sub.id }, create: { ...data, stripeSubId: sub.id }, update: data });
+  request.signature = flittSignature(request);
+  const res = await fetch("https://pay.flitt.com/api/checkout/url", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ request }),
+  });
+  const { response } = await res.json();
+  if (response?.response_status !== "success") throw new Error(`Flitt: ${response?.error_code} ${response?.error_message}`);
+  return response.checkout_url as string;
 }
 
-// Idempotent: replaying the same event leaves the DB unchanged.
-export async function handleStripeEvent(event: Stripe.Event) {
-  switch (event.type) {
-    case "checkout.session.completed": {
-      const s = event.data.object as Stripe.Checkout.Session;
-      if (s.mode === "payment" && s.payment_status === "paid" && s.metadata?.userId) {
-        await db.purchase.upsert({
-          where: { stripePaymentId: s.id },
-          create: { stripePaymentId: s.id, userId: s.metadata.userId, courseId: s.metadata.courseId ?? null, amount: s.amount_total ?? 0, currency: s.currency ?? "usd" },
-          update: {},
-        });
-      }
-      if (s.mode === "subscription" && s.subscription) {
-        await saveSubscription(await stripe().subscriptions.retrieve(String(s.subscription)));
-      }
-      break;
-    }
-    case "invoice.paid": {
-      // Record subscription payments so admin revenue includes them.
-      const inv = event.data.object as Stripe.Invoice;
-      const user = await db.user.findUnique({ where: { stripeCustomerId: String(inv.customer) } });
-      if (user && inv.id) {
-        await db.purchase.upsert({
-          where: { stripePaymentId: inv.id },
-          create: { stripePaymentId: inv.id, userId: user.id, amount: inv.amount_paid, currency: inv.currency },
-          update: {},
-        });
-      }
-      break;
-    }
-    case "customer.subscription.created":
-    case "customer.subscription.updated":
-    case "customer.subscription.deleted":
-      await saveSubscription(event.data.object as Stripe.Subscription);
-      break;
+const addPeriod = (from: Date, interval: "month" | "year") => {
+  const d = new Date(from);
+  if (interval === "month") d.setMonth(d.getMonth() + 1);
+  else d.setFullYear(d.getFullYear() + 1);
+  return d;
+};
+
+// Idempotent: Flitt retries callbacks, the same order_id is only applied once.
+export async function handleFlittCallback(body: Record<string, unknown>) {
+  if (body.signature !== flittSignature(body)) return false;
+  if (body.order_status !== "approved") return true;
+  const orderId = String(body.order_id);
+  if (await db.purchase.findUnique({ where: { stripePaymentId: orderId } })) return true;
+  const meta = JSON.parse(String(body.merchant_data || "{}")) as Meta;
+  if (!meta.userId) return true;
+  let sub;
+
+  if (meta.plan && PLANS[meta.plan]) {
+    // Stack on top of any time still left on an earlier payment.
+    const current = await db.subscription.findFirst({ where: { userId: meta.userId, status: "active" }, orderBy: { currentPeriodEnd: "desc" } });
+    const start = current && current.currentPeriodEnd > new Date() ? current.currentPeriodEnd : new Date();
+    sub = db.subscription.create({
+      data: { userId: meta.userId, stripeCustomerId: "flitt", stripeSubId: orderId, plan: meta.plan, status: "active", currentPeriodEnd: addPeriod(start, PLANS[meta.plan].interval) },
+    });
   }
+  const purchase = db.purchase.create({
+    data: { stripePaymentId: orderId, userId: meta.userId, courseId: meta.courseId ?? null, amount: Number(body.amount), currency: String(body.currency).toLowerCase() },
+  });
+  await (sub ? db.$transaction([sub, purchase]) : db.$transaction([purchase]));
+  return true;
 }

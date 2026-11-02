@@ -26,10 +26,9 @@ export async function PricingCards({ currency = "gel", loggedIn, pro }: { curren
           </ul>
           {p.id === "free" ? (
             <Link href={loggedIn ? "/practice" : "/register"} className="btn-ghost">{loggedIn ? (pro ? t("choose") : t("current")) : t("choose")}</Link>
-          ) : pro ? (
-            <Link href="/profile/billing" className="btn-ghost">{t("current")}</Link>
           ) : loggedIn ? (
-            <CheckoutButton body={{ kind: "plan", plan: p.id, currency }} className={"best" in p ? "btn-accent" : "btn-primary"}>{t("choose")}</CheckoutButton>
+            // Pro is prepaid, so Pro users buy again to extend.
+            <CheckoutButton body={{ kind: "plan", plan: p.id, currency }} className={"best" in p ? "btn-accent" : "btn-primary"}>{pro ? t("extend") : t("choose")}</CheckoutButton>
           ) : (
             <Link href="/register" className={"best" in p ? "btn-accent" : "btn-primary"}>{t("choose")}</Link>
           )}

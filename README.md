@@ -2,7 +2,7 @@
 
 Learn to sell by talking to an AI customer. Pick a profession, call a realistic AI customer (voice or text), handle objections, close — and get scored on 6 skills. Levels, XP, badges, free + paid courses, English + Georgian.
 
-**Stack:** Next.js 15 (App Router) · Tailwind 4 · next-intl (`/ka`, `/en`) · Prisma + Supabase (PostgreSQL) · Firebase Auth (Google + email) · Gemini Live (voice) + Gemini (text, scoring) · Stripe · Cloud Run.
+**Stack:** Next.js 15 (App Router) · Tailwind 4 · next-intl (`/ka`, `/en`) · Prisma + Supabase (PostgreSQL) · Firebase Auth (Google + email) · Gemini Live (voice) + Gemini (text, scoring) · Flitt (payments) · Cloud Run.
 
 ## Run locally
 
@@ -20,7 +20,7 @@ With no keys set, the site still works end-to-end:
 |---|---|
 | Firebase | Login page shows **"Log in as demo student / demo admin"** (dev only, never in production) |
 | `GEMINI_API_KEY` | Calls run in text mode with canned customer replies; scoring uses a simple heuristic |
-| Stripe | Buy buttons show "not configured" |
+| Flitt | Buy buttons show "not configured" |
 
 Tests: `npm test`
 
@@ -31,12 +31,12 @@ Tests: `npm test`
 | `prisma/schema.prisma`, `prisma/seed.ts` | Data model and seed content |
 | `messages/ka.json`, `messages/en.json` | All UI text |
 | `src/app/[locale]/…` | Pages (landing, courses, practice, call, results, dashboard, admin…) |
-| `src/app/api/…` | Auth session, calls, checkout, Stripe webhook, data export |
+| `src/app/api/…` | Auth session, calls, checkout, Flitt callback, data export |
 | `src/lib/ai.ts` | Persona prompt, text replies, scoring, Live ephemeral token |
 | `src/lib/live-voice.ts` | Browser mic ↔ Gemini Live audio streaming |
 | `src/lib/levels.ts` | XP / level / streak rules |
 | `src/lib/access.ts` | Plan checks, daily call limits, max call length |
-| `src/lib/payments.ts` | All Stripe code (swap in BOG / TBC Pay here) |
+| `src/lib/payments.ts` | All Flitt payment code (checkout, signature, callback) |
 | `src/lib/admin-config.ts` | One config that drives the admin CRUD screens |
 
 Rules: free = 3 calls/day, 5 min, levels 1–3 · guest = 1 demo call/day per IP, 2 min · Pro = unlimited, 20 min, all levels and paid courses. Hard needs level 3, Boss needs level 5 + Pro.
@@ -96,8 +96,7 @@ The app reaches Supabase only through Prisma on the server; Supabase Auth/Storag
 printf '%s' 'SUPABASE_POOLED_URL_6543' | gcloud secrets create DATABASE_URL --data-file=-
 printf '%s' 'SUPABASE_DIRECT_URL_5432' | gcloud secrets create DIRECT_URL --data-file=-
 gcloud secrets create FIREBASE_SERVICE_ACCOUNT --data-file=service-account.json
-printf '%s' 'sk_live_or_test_...' | gcloud secrets create STRIPE_SECRET_KEY --data-file=-
-printf '%s' 'whsec_...'           | gcloud secrets create STRIPE_WEBHOOK_SECRET --data-file=-
+printf '%s' 'FLITT_SECRET'        | gcloud secrets create FLITT_SECRET_KEY --data-file=-
 printf '%s' 'AIza...'             | gcloud secrets create GEMINI_API_KEY --data-file=-
 ```
 
@@ -121,13 +120,13 @@ gcloud builds submit --config cloudbuild.yaml
 
 The container runs `prisma migrate deploy` on start (via `DIRECT_URL`). Seeding was done once in step 4.
 
-### 7. Stripe webhook
+### 7. Flitt payments
 
-Stripe Dashboard → Developers → Webhooks → add endpoint `https://YOUR_DOMAIN/api/stripe/webhook` with events:
-`checkout.session.completed`, `invoice.paid`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`.
-Put the signing secret into `STRIPE_WEBHOOK_SECRET`. Also enable the **Customer portal** (Settings → Billing → Customer portal).
+1. Sign up at https://portal.flitt.com, finish merchant verification, and copy the **Merchant ID** and **Payment key** (secret).
+2. Set `FLITT_MERCHANT_ID` and `FLITT_SECRET_KEY`. The callback URL `https://YOUR_DOMAIN/api/flitt/callback` is sent with every order; nothing to configure in the portal.
+3. Pro is prepaid (1 month / 1 year per payment, no auto-renew). Course purchases are one-time.
 
-Local testing: `stripe listen --forward-to localhost:3000/api/stripe/webhook`, test card `4242 4242 4242 4242`.
+Testing: merchant `1549901`, secret `test`, card `4444 5555 6666 1111` (any expiry/CVV). Never use test credentials in production: anyone could get Pro for free.
 
 ### 8. Custom domain + HTTPS
 
@@ -135,7 +134,7 @@ Local testing: `stripe listen --forward-to localhost:3000/api/stripe/webhook`, t
 gcloud beta run domain-mappings create --service=pitchup --domain=pitchup.ge --region=europe-west3
 ```
 
-Add the DNS records it prints at your registrar. HTTPS certificates are issued automatically. Then update `APP_URL`, Firebase authorized domains and the Stripe webhook URL.
+Add the DNS records it prints at your registrar. HTTPS certificates are issued automatically. Then update `APP_URL`, and Firebase authorized domains.
 
 ## Admin
 

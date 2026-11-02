@@ -6,7 +6,6 @@ import { db } from "@/lib/db";
 import { getUser, SESSION_COOKIE } from "@/lib/auth";
 import { addXp, awardBadge } from "@/lib/rewards";
 import { canAccessCourse, userContext } from "@/lib/access";
-import { stripe } from "@/lib/payments";
 import { adminAuth } from "@/lib/firebase-admin";
 
 const locale = z.enum(["ka", "en"]);
@@ -32,9 +31,6 @@ export async function updateProfileAction(form: FormData) {
 export async function deleteAccountAction() {
   const user = await getUser();
   if (!user) return;
-  // Stop billing before the records that link us to Stripe are gone.
-  const subs = await db.subscription.findMany({ where: { userId: user.id, status: { in: ["active", "trialing", "past_due"] } } });
-  for (const s of subs) await stripe().subscriptions.cancel(s.stripeSubId);
   if (!user.firebaseUid.startsWith("dev:")) await adminAuth().deleteUser(user.firebaseUid).catch(() => {});
   await db.user.delete({ where: { id: user.id } }); // cascades to calls, progress, purchases
   (await cookies()).delete(SESSION_COOKIE);

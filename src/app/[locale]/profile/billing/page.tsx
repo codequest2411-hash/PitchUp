@@ -3,7 +3,6 @@ import { Link } from "@/i18n/navigation";
 import { db } from "@/lib/db";
 import { tr } from "@/lib/loc";
 import { requireUser } from "@/lib/guard";
-import { CheckoutButton } from "@/components/CheckoutButton";
 
 export default async function Page({ params, searchParams }: { params: Promise<{ locale: string }>; searchParams: Promise<{ success?: string }> }) {
   const { locale } = await params;
@@ -31,8 +30,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
             <p><span className="text-muted">{t("nextPayment")}:</span> {fmt(sub.currentPeriodEnd)}</p>
           </>
         )}
-        {user.stripeCustomerId && <CheckoutButton endpoint="/api/billing/portal" className="btn-ghost">{t("manage")}</CheckoutButton>}
-        {!active && <Link href="/pricing" className="btn-accent">{t("upgrade")}</Link>}
+        <Link href="/pricing" className="btn-accent">{active ? tp("extend") : t("upgrade")}</Link>
       </div>
       <div className="card space-y-3">
         <h2 className="h2">{t("purchases")}</h2>
