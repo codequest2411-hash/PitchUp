@@ -188,6 +188,12 @@
     "en": "ინგლისური"
   },
   "call": {
+    "styleLabel": "ზარის სტილი",
+    "style_phone": "📱 ტელეფონი",
+    "style_green": "💬 მწვანე ჩატი",
+    "style_blue": "💙 ლურჯი ჩატი",
+    "voiceCall": "ხმოვანი ზარი",
+    "textChat": "ჩატი",
     "connecting": "უკავშირდება…",
     "live": "ეთერში",
     "speaking": "ლაპარაკობს…",

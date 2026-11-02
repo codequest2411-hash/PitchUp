@@ -188,6 +188,12 @@
     "en": "English"
   },
   "call": {
+    "styleLabel": "Call style",
+    "style_phone": "📱 Phone",
+    "style_green": "💬 Green chat",
+    "style_blue": "💙 Blue chat",
+    "voiceCall": "Voice call",
+    "textChat": "Chat",
     "connecting": "Connecting…",
     "live": "Live",
     "speaking": "Speaking…",
