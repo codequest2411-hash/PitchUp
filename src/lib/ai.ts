@@ -68,13 +68,16 @@ const FALLBACK_HINT = {
   en: "Ask an open question: \"What matters most to you here?\"",
 };
 
-export async function coachHint(transcript: Line[], locale: string) {
+// live: the exact next sentence for the seller (shown automatically during the call); otherwise a short tip.
+export async function coachHint(transcript: Line[], locale: string, live = false) {
   const fallback = FALLBACK_HINT[locale === "en" ? "en" : "ka"];
   if (!aiConfigured()) return fallback;
   try {
     const res = await client().models.generateContent({
       model: TEXT_MODEL,
-      contents: `You are a sales coach. Here is a sales call so far:\n${fmt(transcript)}\n\nGive the SELLER one short, concrete tip (max 25 words) for their next line. Answer in ${locale === "ka" ? "Georgian" : "English"}.`,
+      contents: live
+        ? `You are a sales coach. Here is a sales call so far:\n${fmt(transcript)}\n\nWrite the exact next sentence the SELLER should say to the customer (max 30 words), in the seller's own voice. No quotes, no preamble. Answer in ${locale === "ka" ? "Georgian" : "English"}.`
+        : `You are a sales coach. Here is a sales call so far:\n${fmt(transcript)}\n\nGive the SELLER one short, concrete tip (max 25 words) for their next line. Answer in ${locale === "ka" ? "Georgian" : "English"}.`,
       config: NO_THINKING,
     });
     return res.text?.trim() || fallback;

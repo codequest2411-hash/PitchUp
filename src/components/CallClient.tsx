@@ -33,6 +33,9 @@ export function CallClient(p: Props) {
   const [showTranscript, setShowTranscript] = useState(p.mode === "text");
   const [notice, setNotice] = useState<string | null>(null);
   const [hint, setHint] = useState<string | null>(null);
+  const [liveCoach, setLiveCoach] = useState(false);
+  const [suggestion, setSuggestion] = useState<string | null>(null);
+  const coachedAt = useRef(-1);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const voice = useRef<Voice | null>(null);
@@ -48,8 +51,34 @@ export function CallClient(p: Props) {
     try {
       const saved = localStorage.getItem("callSkin");
       if (saved && saved in SKINS) setSkin(saved as Skin);
+      setLiveCoach(localStorage.getItem("liveCoach") === "1");
     } catch {}
   }, []);
+  function toggleCoach() {
+    setLiveCoach(!liveCoach);
+    setSuggestion(null);
+    coachedAt.current = -1;
+    try {
+      localStorage.setItem("liveCoach", liveCoach ? "0" : "1");
+    } catch {}
+  }
+
+  // Live coach: once the customer has finished a line (voice: stopped speaking), suggest what to say next.
+  useEffect(() => {
+    const last = lines.at(-1);
+    if (last?.role === "user") setSuggestion(null);
+    if (!liveCoach || status !== "live" || speaking || last?.role !== "ai" || !last.text.trim() || coachedAt.current === lines.length) return;
+    const timer = setTimeout(async () => {
+      coachedAt.current = lines.length;
+      const res = await fetch(`/api/call/${p.id}/hint`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ live: true, ...(voice.current ? { transcript: linesRef.current } : {}) }),
+      }).catch(() => null);
+      if (res?.ok && linesRef.current.at(-1)?.role === "ai") setSuggestion((await res.json()).hint);
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, [lines, speaking, liveCoach, status, p.id]);
   function pickSkin(next: Skin) {
     setSkin(next);
     try {
@@ -220,6 +249,12 @@ export function CallClient(p: Props) {
           <canvas ref={canvas} width={320} height={40} className="h-10 w-full max-w-[16rem]" aria-hidden />
           {notice && <p role="status" className="rounded-2xl bg-white/10 px-4 py-2 text-center text-sm">{notice}</p>}
           {hint && <p role="status" className="rounded-2xl bg-white/15 px-4 py-2 text-center text-sm">💡 {hint}</p>}
+          {liveCoach && status === "live" && (
+            <div role="status" aria-live="polite" className="w-full rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-left backdrop-blur">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-white/60">🎯 {t("sayThis")}</p>
+              <p className="mt-1 text-[15px] leading-snug">{suggestion ?? <span className="text-white/50">{t("coachWaiting")}</span>}</p>
+            </div>
+          )}
 
           {status === "idle" ? (
             <div className="mt-6 flex flex-col items-center gap-2">
@@ -229,6 +264,7 @@ export function CallClient(p: Props) {
           ) : (
             <div className="mt-6 flex flex-wrap justify-center gap-y-4">
               {mode === "voice" && control(muted ? t("unmute") : t("mute"), muted ? "🔇" : "🎙️", toggleMute, { on: muted, disabled: status !== "live" })}
+              {control(t("liveCoach"), "🎯", toggleCoach, { on: liveCoach })}
               {control(t("hint", { cost: p.hintCost }), "💡", getHint, { disabled: status !== "live" })}
               {mode === "voice" && control(showTranscript ? t("hideTranscript") : t("showTranscript"), "💬", () => setShowTranscript(!showTranscript), { on: showTranscript, expanded: showTranscript })}
               {control(t("end"), "✕", () => void end(), { danger: true, disabled: status === "ending" })}

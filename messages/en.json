@@ -188,6 +188,9 @@
     "en": "English"
   },
   "call": {
+    "liveCoach": "Live coach",
+    "sayThis": "You could say",
+    "coachWaiting": "Listening to the customer… a suggestion appears after they speak.",
     "styleLabel": "Call style",
     "style_phone": "📱 Phone",
     "style_green": "💬 Green chat",
