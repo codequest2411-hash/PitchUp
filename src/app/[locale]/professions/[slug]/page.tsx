@@ -4,6 +4,7 @@ import { Link } from "@/i18n/navigation";
 import { getProfession } from "@/lib/catalog";
 import { tr } from "@/lib/loc";
 import { CourseCard } from "@/components/CourseCard";
+import { ProfessionTile } from "@/components/ProfessionIcon";
 
 export default async function Page({ params }: { params: Promise<{ locale: string; slug: string }> }) {
   const { locale, slug } = await params;
@@ -17,7 +18,7 @@ export default async function Page({ params }: { params: Promise<{ locale: strin
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-center gap-4">
-        <span className="text-5xl" aria-hidden>{p.icon}</span>
+        <ProfessionTile p={p} className="h-16 w-16" iconClass="h-8 w-8" />
         <div className="flex-1">
           <h1 className="h1">{tr(p, "title", locale)}</h1>
           <p className="text-muted">{tr(p, "description", locale)}</p>

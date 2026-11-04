@@ -22,7 +22,7 @@ export default async function Page({ params }: { params: Promise<{ locale: strin
       maxSec={call.maxSec}
       startedAt={call.startedAt.getTime()}
       customerName={call.scenario.customerName}
-      subtitle={`${call.scenario.profession.icon} ${tr(call.scenario, "title", locale)}`}
+      subtitle={tr(call.scenario, "title", locale)}
       initialTranscript={call.transcript as Line[]}
       hintCost={(await getUser()) ? HINT_COST : 0}
     />

@@ -2,16 +2,14 @@ import type { Course, Profession } from "@prisma/client";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { tr } from "@/lib/loc";
+import { ProfessionIcon, professionHue } from "./ProfessionIcon";
 
 type CardCourse = Course & { profession: Profession; _count?: { modules: number; enrollments?: number } };
-
-// Each profession gets its own hue so the grid reads at a glance without stock images.
-const hue = (p: Profession) => (p.order * 37 + 225) % 360;
 
 export async function CourseCard({ course, locale, rank }: { course: CardCourse; locale: string; rank?: number }) {
   const t = await getTranslations("common");
   const tc = await getTranslations("courses");
-  const h = hue(course.profession);
+  const h = professionHue(course.profession.order);
   const enrolled = course._count?.enrollments ?? 0;
   return (
     <Link
@@ -22,7 +20,9 @@ export async function CourseCard({ course, locale, rank }: { course: CardCourse;
         className="relative flex h-32 items-end justify-between p-4"
         style={{ background: `linear-gradient(135deg, hsl(${h} 85% 94%), hsl(${(h + 30) % 360} 70% 84%))` }}
       >
-        <span className="text-5xl transition group-hover:scale-110" aria-hidden>{course.profession.icon}</span>
+        <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/80 shadow-sm transition group-hover:scale-105" style={{ color: `hsl(${h} 65% 38%)` }}>
+          <ProfessionIcon slug={course.profession.slug} className="h-7 w-7" />
+        </span>
         <span className={`chip ${course.isFree ? "bg-ok text-white" : "bg-fg text-bg"}`}>
           {course.isFree ? t("free") : locale === "ka" ? `₾${course.priceGel}` : `$${course.priceUsd}`}
         </span>

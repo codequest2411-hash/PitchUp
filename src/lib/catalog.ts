@@ -12,7 +12,7 @@ const byLevel = { orderBy: { requiredLevel: "asc" as const } };
 
 export const getProfessions = cached("professions", () => db.profession.findMany(byOrder));
 
-export const getProfessionsWithCounts = cached("professions-counts", () =>
+export const getProfessionsWithCounts = cached("professions-counts-v2", () =>
   db.profession.findMany({ ...byOrder, include: { _count: { select: { courses: true, scenarios: true } } } }),
 );
 
@@ -20,7 +20,7 @@ export const getProfessionsWithScenarios = cached("professions-scenarios", () =>
   db.profession.findMany({ ...byOrder, include: { scenarios: byLevel } }),
 );
 
-export const getProfession = cached("profession", (slug: string) =>
+export const getProfession = cached("profession-v2", (slug: string) =>
   db.profession.findUnique({
     where: { slug },
     include: { courses: { where: { published: true }, ...byLevel, include: { profession: true } }, scenarios: byLevel },

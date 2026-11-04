@@ -4,6 +4,7 @@ import { Link } from "@/i18n/navigation";
 import { requireUser } from "@/lib/guard";
 import { updateProfileAction } from "@/app/actions";
 import { DeleteAccountButton } from "@/components/DeleteAccountButton";
+import { LogoutButton } from "@/components/LogoutButton";
 
 // shortcut: avatar comes from the Google account; custom avatar upload to Cloud Storage is not built yet.
 export default async function Page({ params }: { params: Promise<{ locale: string }> }) {
@@ -22,10 +23,11 @@ export default async function Page({ params }: { params: Promise<{ locale: strin
         ) : (
           <span className="flex h-16 w-16 items-center justify-center rounded-full bg-brand text-2xl font-bold text-brand-fg">{(user.name ?? "?")[0]}</span>
         )}
-        <div>
+        <div className="flex-1">
           <h1 className="h1">{t("title")}</h1>
           <p className="text-muted">{user.email}</p>
         </div>
+        <LogoutButton label={tc("logout")} />
       </div>
 
       <form action={updateProfileAction} className="card space-y-4">

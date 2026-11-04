@@ -3,7 +3,6 @@ import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { getUser, isAdmin } from "@/lib/auth";
 import { LocaleSwitcher } from "./LocaleSwitcher";
-import { LogoutButton } from "./LogoutButton";
 
 export async function Header({ locale }: { locale: string }) {
   const t = await getTranslations("common");
@@ -31,7 +30,6 @@ export async function Header({ locale }: { locale: string }) {
         )}
         <span className="xl:sr-only">{t("profile")}</span>
       </Link>
-      <LogoutButton label={t("logout")} />
     </>
   ) : (
     <>

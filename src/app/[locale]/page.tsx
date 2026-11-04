@@ -6,6 +6,7 @@ import { getUser } from "@/lib/auth";
 import { planTier } from "@/lib/access";
 import { tr } from "@/lib/loc";
 import { PricingCards } from "@/components/PricingCards";
+import { ProfessionTile } from "@/components/ProfessionIcon";
 
 export default async function Home({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -94,7 +95,7 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
         <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
           {professions.map((p) => (
             <Link key={p.id} href={`/professions/${p.slug}`} className="card flex flex-col items-center gap-2 text-center transition hover:-translate-y-0.5 hover:border-fg/15 hover:shadow-[0_12px_32px_-16px_rgb(16_24_40/0.25)]">
-              <span className="text-3xl" aria-hidden>{p.icon}</span>
+              <ProfessionTile p={p} />
               <span className="text-sm font-semibold">{tr(p, "title", locale)}</span>
             </Link>
           ))}

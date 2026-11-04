@@ -7,6 +7,7 @@ import { tr } from "@/lib/loc";
 import { getUser } from "@/lib/auth";
 import { canAccessCourse, userContext } from "@/lib/access";
 import { CheckoutButton } from "@/components/CheckoutButton";
+import { ProfessionIcon } from "@/components/ProfessionIcon";
 
 const ICON = { TEXT: "📖", VIDEO: "🎬", QUIZ: "❓", CALL: "📞" };
 
@@ -34,8 +35,8 @@ export default async function Page({ params, searchParams }: { params: Promise<{
     <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
       <div className="space-y-6">
         {(await searchParams).success && <p className="card border-ok text-ok">{t("purchased")}</p>}
-        <Link href={`/professions/${course.profession.slug}`} className="text-sm text-muted hover:text-fg">
-          {course.profession.icon} {tr(course.profession, "title", locale)}
+        <Link href={`/professions/${course.profession.slug}`} className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-fg">
+          <ProfessionIcon slug={course.profession.slug} className="h-4 w-4" /> {tr(course.profession, "title", locale)}
         </Link>
         <h1 className="h1">{tr(course, "title", locale)}</h1>
         <p className="text-lg text-muted">{tr(course, "description", locale)}</p>

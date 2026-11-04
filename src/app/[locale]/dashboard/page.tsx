@@ -7,6 +7,7 @@ import { callsUsedToday, FREE_CALLS_PER_DAY, userContext } from "@/lib/access";
 import { FREE_MAX_LEVEL, levelProgress } from "@/lib/levels";
 import { SKILLS } from "@/lib/scoring";
 import { SkillBars, scoreColor } from "@/components/SkillBars";
+import { ProfessionTile } from "@/components/ProfessionIcon";
 
 export default async function Page({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -87,7 +88,7 @@ export default async function Page({ params }: { params: Promise<{ locale: strin
           <h2 className="h2">{t("recommended")}</h2>
           {recommended && (
             <>
-              <p>{recommended.profession.icon} {recommended.customerName} — {tr(recommended, "title", locale)}</p>
+              <p>{recommended.customerName} — {tr(recommended, "title", locale)}</p>
               <Link href={`/practice?scenario=${recommended.id}`} className="btn-accent">📞 {tc("practice")}</Link>
             </>
           )}
@@ -131,7 +132,7 @@ export default async function Page({ params }: { params: Promise<{ locale: strin
             {calls.slice(0, 8).map((c) => (
               <li key={c.id}>
                 <Link href={`/results/${c.id}`} className="flex items-center gap-3 py-3 hover:text-brand">
-                  <span aria-hidden>{c.scenario.profession.icon}</span>
+                  <ProfessionTile p={c.scenario.profession} className="h-9 w-9 rounded-xl" iconClass="h-4.5 w-4.5" />
                   <span className="flex-1">{c.scenario.customerName} — {tr(c.scenario, "title", locale)}</span>
                   <span className="hidden text-sm text-muted sm:inline">{c.outcome && to(c.outcome)}</span>
                   <span className="font-bold tabular-nums">{c.score}</span>

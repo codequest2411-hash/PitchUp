@@ -36,7 +36,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
         <label htmlFor="profession" className="sr-only">{tc("professions")}</label>
         <select id="profession" name="profession" defaultValue={profession ?? ""} className="input">
           <option value="">{t("allProfessions")}</option>
-          {professions.map((p) => <option key={p.id} value={p.slug}>{p.icon} {tr(p, "title", locale)}</option>)}
+          {professions.map((p) => <option key={p.id} value={p.slug}>{tr(p, "title", locale)}</option>)}
         </select>
         <button className="btn-primary">{tc("open")}</button>
       </form>

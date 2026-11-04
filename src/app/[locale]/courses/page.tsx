@@ -4,6 +4,7 @@ import { Link } from "@/i18n/navigation";
 import { getCourses, getPopularCourses, getProfessions } from "@/lib/catalog";
 import { tr } from "@/lib/loc";
 import { CourseCard } from "@/components/CourseCard";
+import { ProfessionIcon } from "@/components/ProfessionIcon";
 
 type Search = { profession?: string; price?: string; level?: string };
 
@@ -93,8 +94,8 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           </Link>
           {professions.map((p) => (
             <Link key={p.id} href={withProfession(p.slug)} aria-current={sp.profession === p.slug ? "page" : undefined}
-              className={`chip shrink-0 px-3.5 py-1.5 ${sp.profession === p.slug ? "bg-fg text-bg" : "border border-line bg-card hover:border-fg/20"}`}>
-              <span aria-hidden>{p.icon}</span> {tr(p, "title", locale)}
+              className={`chip shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 ${sp.profession === p.slug ? "bg-fg text-bg" : "border border-line bg-card hover:border-fg/20"}`}>
+              <ProfessionIcon slug={p.slug} className="h-3.5 w-3.5" /> {tr(p, "title", locale)}
             </Link>
           ))}
         </nav>

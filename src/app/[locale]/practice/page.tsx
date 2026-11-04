@@ -34,7 +34,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
         initialScenario={sp.scenario}
         professions={professions.map((p) => ({
           slug: p.slug,
-          title: `${p.icon} ${tr(p, "title", locale)}`,
+          title: tr(p, "title", locale),
           scenarios: p.scenarios.map((s) => ({
             id: s.id,
             title: `${s.customerName} — ${tr(s, "title", locale)}`,
