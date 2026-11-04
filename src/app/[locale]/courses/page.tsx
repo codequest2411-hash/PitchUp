@@ -25,10 +25,13 @@ export default async function Page({ params, searchParams }: { params: Promise<{
 
   return (
     <div className="space-y-12">
-      <section className="relative overflow-hidden rounded-3xl bg-[#0b0d17] text-white">
-        <Image src="/images/closer-floor.webp" alt="" fill priority sizes="(max-width: 1200px) 100vw, 1200px" className="object-cover object-[center_30%] opacity-60" />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#0b0d17] via-[#0b0d17]/85 to-transparent" aria-hidden />
-        <div className="relative max-w-xl space-y-5 px-6 py-12 sm:px-10 sm:py-16">
+      {/* Photo sits in its own panel at full brightness; the source is only 736px wide, so it is never stretched full-bleed. */}
+      <section className="grid overflow-hidden rounded-3xl bg-[#0b0d17] text-white md:grid-cols-[1.15fr_1fr]">
+        <div className="relative aspect-[4/3] md:order-2 md:aspect-auto">
+          <Image src="/images/closer-floor.webp" alt="" fill priority sizes="(max-width: 768px) 100vw, 520px" className="object-cover object-[center_35%]" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0b0d17] via-transparent to-transparent md:bg-gradient-to-r" aria-hidden />
+        </div>
+        <div className="relative space-y-5 px-6 pb-10 pt-6 sm:px-10 md:py-16">
           <span className="eyebrow border-white/20 bg-white/10 text-white">{t("heroEyebrow")}</span>
           <h1 className="text-3xl font-semibold leading-tight tracking-[-0.03em] text-balance sm:text-5xl">{t("heroTitle")}</h1>
           <p className="text-white/75 text-pretty">{t("heroSub")}</p>
