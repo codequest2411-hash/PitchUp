@@ -6,7 +6,7 @@ import { db } from "./db";
 // One "pay what you want" product (USD) in the Dodo dashboard; each checkout sets the exact amount and the
 // webhook only grants access when at least that amount was paid (PWYW lets the buyer edit the price).
 // Pro is prepaid: each payment extends access by one period; nothing auto-renews.
-// shortcut: always charges USD (PWYW base currency must be USD/GBP/EUR); keep Adaptive Currency off in Dodo or the amount check rejects payments.
+// Prices are set in USD (PWYW base currency must be USD/GBP/EUR); with Adaptive Currency on, the check uses the USD settlement amount.
 // DB columns keep their stripe* names to avoid a migration; they hold Dodo payment ids.
 
 export const PLANS = {
@@ -77,7 +77,16 @@ const addPeriod = (from: Date, interval: "month" | "year") => {
   return d;
 };
 
-type DodoEvent = { type?: string; data?: { payment_id?: string; total_amount?: number; currency?: string; metadata?: Partial<Meta> } };
+type DodoEvent = {
+  type?: string;
+  data?: { payment_id?: string; total_amount?: number; currency?: string; settlement_amount?: number; settlement_currency?: string; metadata?: Partial<Meta> };
+};
+
+// With Adaptive Currency the buyer pays in local money (e.g. GEL); settlement_* is what we receive in USD.
+const paidUsdCents = (d: NonNullable<DodoEvent["data"]>) =>
+  d.settlement_currency?.toUpperCase() === "USD" ? Number(d.settlement_amount)
+  : d.currency?.toUpperCase() === "USD" ? Number(d.total_amount)
+  : NaN;
 
 // Idempotent: Dodo retries webhooks, the same payment_id is only applied once.
 export async function handleDodoEvent(event: DodoEvent) {
@@ -85,8 +94,9 @@ export async function handleDodoEvent(event: DodoEvent) {
   if (event.type !== "payment.succeeded" || !d?.payment_id) return;
   const meta = d.metadata ?? {};
   if (!meta.userId) return;
-  if (d.currency?.toUpperCase() !== "USD" || Number(d.total_amount) < Number(meta.expectedCents)) {
-    console.error("dodo payment below expected amount, not granting", d.payment_id, d.total_amount, d.currency, meta.expectedCents);
+  const paid = paidUsdCents(d);
+  if (!(paid >= Number(meta.expectedCents))) {
+    console.error("dodo payment below expected amount, not granting", d.payment_id, d.total_amount, d.currency, d.settlement_amount, d.settlement_currency, meta.expectedCents);
     return;
   }
   if (await db.purchase.findUnique({ where: { stripePaymentId: d.payment_id } })) return;
@@ -101,7 +111,7 @@ export async function handleDodoEvent(event: DodoEvent) {
     });
   }
   const purchase = db.purchase.create({
-    data: { stripePaymentId: d.payment_id, userId: meta.userId, courseId: meta.courseId ?? null, amount: Number(d.total_amount), currency: "usd" },
+    data: { stripePaymentId: d.payment_id, userId: meta.userId, courseId: meta.courseId ?? null, amount: paid, currency: "usd" },
   });
   await (sub ? db.$transaction([sub, purchase]) : db.$transaction([purchase]));
 }

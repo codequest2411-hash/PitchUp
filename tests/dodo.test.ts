@@ -58,6 +58,21 @@ describe("dodo", () => {
     expect(db.$transaction).toHaveBeenCalledTimes(1);
   });
 
+  it("local-currency payments are checked by their USD settlement amount", async () => {
+    db.purchase.findUnique.mockResolvedValue(null);
+    const gel = (settled: number, id: string) => ({
+      type: "payment.succeeded",
+      data: { payment_id: id, total_amount: 67252, currency: "GEL", settlement_amount: settled, settlement_currency: "USD", metadata: { userId: "u1", plan: "ultra_yearly" as const, expectedCents: "24900" } },
+    });
+    await handleDodoEvent(gel(2000, "pay_g1")); // big GEL number, but only $20 settled
+    expect(db.$transaction).not.toHaveBeenCalled();
+    await handleDodoEvent(gel(24900, "pay_g2"));
+    expect(db.$transaction).toHaveBeenCalledTimes(1);
+    expect(db.purchase.create.mock.calls[0][0].data.amount).toBe(24900);
+    await handleDodoEvent({ ...gel(24900, "pay_g3"), data: { ...gel(24900, "pay_g3").data, settlement_currency: undefined } });
+    expect(db.$transaction).toHaveBeenCalledTimes(1); // no USD figure at all: refuse
+  });
+
   it("planTier: ultra wins over pro, nothing active is free", async () => {
     db.subscription.findMany.mockResolvedValueOnce([]);
     expect(await planTier("u1")).toBe("free");
