@@ -1,4 +1,5 @@
 import { PrismaClient, Difficulty, LessonType } from "@prisma/client";
+import { BOOK_COURSES } from "./book-courses";
 
 const db = new PrismaClient();
 
@@ -164,6 +165,56 @@ async function main() {
         },
       });
     }
+  }
+  // Book-based courses live in their own profession; created only if missing.
+  const sm = { slug: "sales-mastery", ka: "გაყიდვების და მარკეტინგის ოსტატობა", en: "Sales & marketing mastery",
+    productKa: "მარკეტინგისა და გაყიდვების საკონსულტაციო პაკეტი მცირე ბიზნესისთვის", productEn: "a marketing and sales consulting package for a small business",
+    names: ["მაია", "ვახტანგი", "ნესტან"] };
+  let mastery = await db.profession.findUnique({ where: { slug: sm.slug }, include: { scenarios: { orderBy: { requiredLevel: "asc" } } } });
+  if (!mastery) {
+    const prof = await db.profession.create({
+      data: { slug: sm.slug, icon: "📚", titleKa: sm.ka, titleEn: sm.en, order: professions.length,
+        descriptionKa: "კურსები გაყიდვებისა და მარკეტინგის 243 საუკეთესო წიგნის მთავარ იდეებზე.",
+        descriptionEn: "Courses built on the core ideas of 243 top sales and marketing books." },
+    });
+    for (const [j, s] of personas.entries()) {
+      await db.scenario.create({
+        data: {
+          professionId: prof.id, difficulty: s.d, requiredLevel: s.lvl, isPro: s.pro,
+          titleKa: s.tKa, titleEn: s.tEn, customerName: sm.names[j],
+          personaPromptKa: `შენი სახელია ${sm.names[j]}. გამყიდველი გთავაზობს: ${sm.productKa}. ${s.ka}`,
+          personaPromptEn: `Your name is ${sm.names[j]}. The seller is offering you ${sm.productEn}. ${s.en}`,
+        },
+      });
+    }
+    mastery = await db.profession.findUnique({ where: { slug: sm.slug }, include: { scenarios: { orderBy: { requiredLevel: "asc" } } } });
+  }
+  for (const c of BOOK_COURSES) {
+    const slug = `${sm.slug}-${c.key}`;
+    if (!mastery || (await db.course.findUnique({ where: { slug } }))) continue;
+    await db.course.create({
+      data: {
+        slug, professionId: mastery.id, titleKa: c.title.ka, titleEn: c.title.en,
+        descriptionKa: `${c.desc.ka} წიგნები: ${c.books}`, descriptionEn: `${c.desc.en} Based on: ${c.books}`,
+        durationMin: c.min, requiredLevel: c.lvl, isFree: c.free,
+        priceGel: c.free ? 0 : 49, priceUsd: c.free ? 0 : 19,
+        modules: {
+          create: [{
+            titleKa: "მთავარი მოდული", titleEn: "Core module", order: 0,
+            lessons: {
+              create: [
+                ...c.lessons.map((l, i) => ({ type: LessonType.TEXT, order: i, xpReward: 10, titleKa: l.title.ka, titleEn: l.title.en, contentKa: l.body.ka, contentEn: l.body.en })),
+                { type: LessonType.QUIZ, order: c.lessons.length, xpReward: 15, titleKa: "ქვიზი", titleEn: "Quiz",
+                  questions: { create: c.quiz.map((q) => ({ questionKa: q.q.ka, questionEn: q.q.en, options: q.o, correctIndex: q.c })) } },
+                { type: LessonType.CALL, order: c.lessons.length + 1, xpReward: 25, titleKa: "პრაქტიკული ზარი", titleEn: "Practice call",
+                  contentKa: "გამოიყენე ნასწავლი რეალურ ზარში.", contentEn: "Use what you learned on a real call.",
+                  scenarioId: mastery.scenarios[c.persona]?.id },
+              ],
+            },
+          }],
+        },
+      },
+    });
   }
   console.log("Seed done");
 }

@@ -10,17 +10,17 @@ const cached = <A extends unknown[], R>(key: string, fn: (...args: A) => Promise
 const byOrder = { orderBy: { order: "asc" as const } };
 const byLevel = { orderBy: { requiredLevel: "asc" as const } };
 
-export const getProfessions = cached("professions", () => db.profession.findMany(byOrder));
+export const getProfessions = cached("professions-v3", () => db.profession.findMany(byOrder));
 
-export const getProfessionsWithCounts = cached("professions-counts-v2", () =>
+export const getProfessionsWithCounts = cached("professions-counts-v3", () =>
   db.profession.findMany({ ...byOrder, include: { _count: { select: { courses: true, scenarios: true } } } }),
 );
 
-export const getProfessionsWithScenarios = cached("professions-scenarios", () =>
+export const getProfessionsWithScenarios = cached("professions-scenarios-v3", () =>
   db.profession.findMany({ ...byOrder, include: { scenarios: byLevel } }),
 );
 
-export const getProfession = cached("profession-v2", (slug: string) =>
+export const getProfession = cached("profession-v3", (slug: string) =>
   db.profession.findUnique({
     where: { slug },
     include: { courses: { where: { published: true }, ...byLevel, include: { profession: true } }, scenarios: byLevel },
@@ -30,7 +30,7 @@ export const getProfession = cached("profession-v2", (slug: string) =>
 const withStats = { profession: true, _count: { select: { enrollments: true, modules: true } } } as const;
 
 // Most-enrolled first; level breaks ties so a brand-new catalog still shows the beginner courses.
-export const getPopularCourses = cached("courses-popular", (take: number) =>
+export const getPopularCourses = cached("courses-popular-v3", (take: number) =>
   db.course.findMany({
     where: { published: true },
     include: withStats,
@@ -39,7 +39,7 @@ export const getPopularCourses = cached("courses-popular", (take: number) =>
   }),
 );
 
-export const getCourses = cached("courses-v2", (profession?: string, price?: string, level?: number) =>
+export const getCourses = cached("courses-v3", (profession?: string, price?: string, level?: number) =>
   db.course.findMany({
     where: {
       published: true,
