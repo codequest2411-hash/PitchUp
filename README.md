@@ -2,7 +2,7 @@
 
 Learn to sell by talking to an AI customer. Pick a profession, call a realistic AI customer (voice or text), handle objections, close — and get scored on 6 skills. Levels, XP, badges, free + paid courses, English + Georgian.
 
-**Stack:** Next.js 15 (App Router) · Tailwind 4 · next-intl (`/ka`, `/en`) · Prisma + Supabase (PostgreSQL) · Supabase Auth (Google + email) · Gemini Live (voice) + Gemini (text, scoring) · Flitt (payments) · Vercel.
+**Stack:** Next.js 15 (App Router) · Tailwind 4 · next-intl (`/ka`, `/en`) · Prisma + Supabase (PostgreSQL) · Supabase Auth (Google + email) · Gemini Live (voice) + Gemini (text, scoring) · Dodo Payments · Vercel.
 
 ## Run locally
 
@@ -20,7 +20,7 @@ With no keys set, the site still works end-to-end:
 |---|---|
 | Supabase Auth (`SUPABASE_URL`) | Login page shows **"Log in as demo student / demo admin"** (dev only, never in production) |
 | `GEMINI_API_KEY` | Calls run in text mode with canned customer replies; scoring uses a simple heuristic |
-| Flitt | Buy buttons show "not configured" |
+| Dodo Payments | Buy buttons show "not configured" |
 
 Tests: `npm test`
 
@@ -31,12 +31,12 @@ Tests: `npm test`
 | `prisma/schema.prisma`, `prisma/seed.ts` | Data model and seed content |
 | `messages/ka.json`, `messages/en.json` | All UI text |
 | `src/app/[locale]/…` | Pages (landing, courses, practice, call, results, dashboard, admin…) |
-| `src/app/api/…` | Auth session, calls, checkout, Flitt callback, data export |
+| `src/app/api/…` | Auth session, calls, checkout, Dodo webhook, data export |
 | `src/lib/ai.ts` | Persona prompt, text replies, scoring, Live ephemeral token |
 | `src/lib/live-voice.ts` | Browser mic ↔ Gemini Live audio streaming |
 | `src/lib/levels.ts` | XP / level / streak rules |
 | `src/lib/access.ts` | Plan checks, daily call limits, max call length |
-| `src/lib/payments.ts` | All Flitt payment code (checkout, signature, callback) |
+| `src/lib/payments.ts` | All Dodo Payments code (checkout, webhook signature, granting access) |
 | `src/lib/admin-config.ts` | One config that drives the admin CRUD screens |
 
 Rules: free = 3 calls/day, 5 min, levels 1–3 · guest = 1 demo call/day per IP, 2 min · Pro = unlimited, 20 min, all levels and paid courses. Hard needs level 3, Boss needs level 5 + Pro.
@@ -96,7 +96,8 @@ The app reaches Supabase only through Prisma on the server; the browser only tal
 printf '%s' 'SUPABASE_POOLED_URL_6543' | gcloud secrets create DATABASE_URL --data-file=-
 printf '%s' 'SUPABASE_DIRECT_URL_5432' | gcloud secrets create DIRECT_URL --data-file=-
 printf '%s' "$(openssl rand -base64 32)" | gcloud secrets create SESSION_SECRET --data-file=-
-printf '%s' 'FLITT_SECRET'        | gcloud secrets create FLITT_SECRET_KEY --data-file=-
+printf '%s' 'dodo_live_...'       | gcloud secrets create DODO_PAYMENTS_API_KEY --data-file=-
+printf '%s' 'whsec_...'           | gcloud secrets create DODO_WEBHOOK_KEY --data-file=-
 printf '%s' 'AIza...'             | gcloud secrets create GEMINI_API_KEY --data-file=-
 ```
 
@@ -120,13 +121,17 @@ gcloud builds submit --config cloudbuild.yaml
 
 The container runs `prisma migrate deploy` on start (via `DIRECT_URL`). Seeding was done once in step 4.
 
-### 7. Flitt payments
+### 7. Dodo Payments
 
-1. Sign up at https://portal.flitt.com, finish merchant verification, and copy the **Merchant ID** and **Payment key** (secret).
-2. Set `FLITT_MERCHANT_ID` and `FLITT_SECRET_KEY`. The callback URL `https://YOUR_DOMAIN/api/flitt/callback` is sent with every order; nothing to configure in the portal.
-3. Pro is prepaid (1 month / 1 year per payment, no auto-renew). Course purchases are one-time.
+Dodo is the merchant of record (handles cards, tax and payouts; individuals can sign up, payouts to Georgia are supported).
 
-Testing: merchant `1549901`, secret `test`, card `4444 5555 6666 1111` (any expiry/CVV). Never use test credentials in production: anyone could get Pro for free.
+1. Sign up at https://app.dodopayments.com and verify your ID (needed for live payments and payouts; test mode works at once).
+2. **Products → Create**: one-time, **Pay what you want**, currency **USD**, minimum $1, name "PitchUp". Copy its `pdt_...` id into `DODO_PRODUCT_ID`. The app sets the real price for every checkout (Pro $12 / $99, courses at their USD price).
+3. **Developer → API keys**: copy the key into `DODO_PAYMENTS_API_KEY` (`dodo_test_...` uses test mode, `dodo_live_...` live).
+4. **Developer → Webhooks**: add `https://YOUR_DOMAIN/api/dodo/webhook` with event `payment.succeeded`; copy the signing secret into `DODO_WEBHOOK_KEY`.
+5. Keep **Adaptive Currency off**: the webhook only grants access for USD payments of at least the expected amount.
+
+Pro is prepaid (1 month / 1 year per payment, no auto-renew). Course purchases are one-time.
 
 ### 8. Custom domain + HTTPS
 

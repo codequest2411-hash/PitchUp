@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
-// Posts to a payment route that returns { url } and redirects there (Flitt checkout).
+// Posts to a payment route that returns { url } and redirects there (Dodo Payments checkout).
 export function CheckoutButton({ body, className, children, endpoint = "/api/checkout" }: {
   body?: object; className?: string; children: React.ReactNode; endpoint?: string;
 }) {

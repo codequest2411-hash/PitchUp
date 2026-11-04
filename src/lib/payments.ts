@@ -2,10 +2,12 @@ import crypto from "node:crypto";
 import type { User } from "@prisma/client";
 import { db } from "./db";
 
-// All payment-provider code lives here (Flitt hosted checkout, https://docs.flitt.com).
-// Pro is prepaid: each approved payment extends access by one period; nothing auto-renews.
-// shortcut: no Flitt recurring subscriptions (recurring_data signing is undocumented), add once Flitt confirms it.
-// DB columns keep their stripe* names to avoid a migration; they hold Flitt order ids.
+// All payment-provider code lives here: Dodo Payments hosted checkout (https://docs.dodopayments.com).
+// One "pay what you want" product (USD) in the Dodo dashboard; each checkout sets the exact amount and the
+// webhook only grants access when at least that amount was paid (PWYW lets the buyer edit the price).
+// Pro is prepaid: each payment extends access by one period; nothing auto-renews.
+// shortcut: always charges USD (PWYW base currency must be USD/GBP/EUR); keep Adaptive Currency off in Dodo or the amount check rejects payments.
+// DB columns keep their stripe* names to avoid a migration; they hold Dodo payment ids.
 
 export const PLANS = {
   pro_monthly: { gel: 29, usd: 12, interval: "month" as const },
@@ -14,65 +16,56 @@ export const PLANS = {
 export type PlanId = keyof typeof PLANS;
 export type Currency = "gel" | "usd";
 
-export const paymentsConfigured = () => Boolean(process.env.FLITT_MERCHANT_ID && process.env.FLITT_SECRET_KEY);
+export const paymentsConfigured = () => Boolean(process.env.DODO_PAYMENTS_API_KEY && process.env.DODO_PRODUCT_ID);
 const appUrl = () => process.env.APP_URL ?? "http://localhost:3000";
+const dodoBase = () => (process.env.DODO_PAYMENTS_API_KEY?.startsWith("dodo_live_") ? "https://live.dodopayments.com" : "https://test.dodopayments.com");
 
-// sha1("secret|v1|v2|...") over non-empty values sorted by key; signature fields excluded.
-export function flittSignature(params: Record<string, unknown>, secret = process.env.FLITT_SECRET_KEY!) {
-  const values = Object.keys(params)
-    .filter((k) => k !== "signature" && k !== "response_signature_string")
-    .sort()
-    .map((k) => params[k])
-    .filter((v) => v !== undefined && v !== null && v !== "")
-    .map(String);
-  return crypto.createHash("sha1").update([secret, ...values].join("|")).digest("hex");
-}
-
-type Meta = { userId: string; plan?: PlanId; courseId?: string };
+type Meta = { userId: string; plan?: PlanId; courseId?: string; expectedCents: string };
 
 export async function createCheckout(
   user: User,
   item: { kind: "plan"; plan: PlanId } | { kind: "course"; courseId: string },
-  currency: Currency,
+  _currency: Currency,
   locale: string,
 ) {
-  let amount: number, desc: string, back: string;
-  const meta: Meta = { userId: user.id };
+  let usd: number, back: string;
+  const meta: Meta = { userId: user.id, expectedCents: "" };
   if (item.kind === "plan") {
-    const p = PLANS[item.plan];
-    amount = p[currency];
-    desc = `PitchUp Pro (1 ${p.interval})`;
+    usd = PLANS[item.plan].usd;
     back = `/${locale}/profile/billing?success=1`;
     meta.plan = item.plan;
   } else {
     const course = await db.course.findUniqueOrThrow({ where: { id: item.courseId } });
-    amount = currency === "gel" ? course.priceGel : course.priceUsd;
-    desc = course.titleEn;
+    usd = course.priceUsd;
     back = `/${locale}/courses/${course.slug}?success=1`;
     meta.courseId = course.id;
   }
-  const request: Record<string, unknown> = {
-    version: "1.0.1",
-    merchant_id: Number(process.env.FLITT_MERCHANT_ID),
-    order_id: `pitchup_${crypto.randomUUID()}`,
-    order_desc: desc,
-    amount: amount * 100,
-    currency: currency.toUpperCase(),
-    lang: locale === "ka" ? "ka" : "en",
-    sender_email: user.email ?? undefined,
-    merchant_data: JSON.stringify(meta),
-    response_url: `${appUrl()}/api/flitt/return?to=${encodeURIComponent(back)}`,
-    server_callback_url: `${appUrl()}/api/flitt/callback`,
-  };
-  request.signature = flittSignature(request);
-  const res = await fetch("https://pay.flitt.com/api/checkout/url", {
+  meta.expectedCents = String(usd * 100);
+  const res = await fetch(`${dodoBase()}/checkouts`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ request }),
+    headers: { Authorization: `Bearer ${process.env.DODO_PAYMENTS_API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      product_cart: [{ product_id: process.env.DODO_PRODUCT_ID, quantity: 1, amount: usd * 100 }],
+      customer: { email: user.email ?? undefined, name: user.name ?? undefined },
+      return_url: `${appUrl()}${back}`,
+      metadata: meta,
+    }),
   });
-  const { response } = await res.json();
-  if (response?.response_status !== "success") throw new Error(`Flitt: ${response?.error_code} ${response?.error_message}`);
-  return response.checkout_url as string;
+  const out = await res.json().catch(() => null);
+  if (!res.ok || !out?.checkout_url) throw new Error(`Dodo checkout ${res.status}: ${JSON.stringify(out).slice(0, 300)}`);
+  return out.checkout_url as string;
+}
+
+// Standard Webhooks: base64 HMAC-SHA256 of "id.timestamp.body" with the base64 key after "whsec_".
+export function verifyDodoSignature(body: string, h: { id: string | null; timestamp: string | null; signature: string | null }, secret = process.env.DODO_WEBHOOK_KEY ?? "", now = Date.now()) {
+  if (!secret || !h.id || !h.timestamp || !h.signature) return false;
+  if (Math.abs(now / 1000 - Number(h.timestamp)) > 300) return false; // replay window
+  const key = Buffer.from(secret.replace(/^whsec_/, ""), "base64");
+  const expected = Buffer.from(crypto.createHmac("sha256", key).update(`${h.id}.${h.timestamp}.${body}`).digest("base64"));
+  return h.signature.split(" ").some((s) => {
+    const sig = Buffer.from(s.split(",")[1] ?? "");
+    return sig.length === expected.length && crypto.timingSafeEqual(sig, expected);
+  });
 }
 
 const addPeriod = (from: Date, interval: "month" | "year") => {
@@ -82,27 +75,30 @@ const addPeriod = (from: Date, interval: "month" | "year") => {
   return d;
 };
 
-// Idempotent: Flitt retries callbacks, the same order_id is only applied once.
-export async function handleFlittCallback(body: Record<string, unknown>) {
-  if (body.signature !== flittSignature(body)) return false;
-  if (body.order_status !== "approved") return true;
-  const orderId = String(body.order_id);
-  if (await db.purchase.findUnique({ where: { stripePaymentId: orderId } })) return true;
-  const meta = JSON.parse(String(body.merchant_data || "{}")) as Meta;
-  if (!meta.userId) return true;
-  let sub;
+type DodoEvent = { type?: string; data?: { payment_id?: string; total_amount?: number; currency?: string; metadata?: Partial<Meta> } };
 
+// Idempotent: Dodo retries webhooks, the same payment_id is only applied once.
+export async function handleDodoEvent(event: DodoEvent) {
+  const d = event.data;
+  if (event.type !== "payment.succeeded" || !d?.payment_id) return;
+  const meta = d.metadata ?? {};
+  if (!meta.userId) return;
+  if (d.currency?.toUpperCase() !== "USD" || Number(d.total_amount) < Number(meta.expectedCents)) {
+    console.error("dodo payment below expected amount, not granting", d.payment_id, d.total_amount, d.currency, meta.expectedCents);
+    return;
+  }
+  if (await db.purchase.findUnique({ where: { stripePaymentId: d.payment_id } })) return;
+  let sub;
   if (meta.plan && PLANS[meta.plan]) {
     // Stack on top of any time still left on an earlier payment.
     const current = await db.subscription.findFirst({ where: { userId: meta.userId, status: "active" }, orderBy: { currentPeriodEnd: "desc" } });
     const start = current && current.currentPeriodEnd > new Date() ? current.currentPeriodEnd : new Date();
     sub = db.subscription.create({
-      data: { userId: meta.userId, stripeCustomerId: "flitt", stripeSubId: orderId, plan: meta.plan, status: "active", currentPeriodEnd: addPeriod(start, PLANS[meta.plan].interval) },
+      data: { userId: meta.userId, stripeCustomerId: "dodo", stripeSubId: d.payment_id, plan: meta.plan, status: "active", currentPeriodEnd: addPeriod(start, PLANS[meta.plan].interval) },
     });
   }
   const purchase = db.purchase.create({
-    data: { stripePaymentId: orderId, userId: meta.userId, courseId: meta.courseId ?? null, amount: Number(body.amount), currency: String(body.currency).toLowerCase() },
+    data: { stripePaymentId: d.payment_id, userId: meta.userId, courseId: meta.courseId ?? null, amount: Number(d.total_amount), currency: "usd" },
   });
   await (sub ? db.$transaction([sub, purchase]) : db.$transaction([purchase]));
-  return true;
 }

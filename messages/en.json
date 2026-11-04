@@ -336,7 +336,7 @@
   },
   "legal": {
     "privacyTitle": "Privacy policy",
-    "privacyBody": "We store your account details (name, email, avatar from Google), your learning progress, call transcripts and scores so the service can work. Payment data is handled by Flitt; we never see your card number. Voice audio is processed by Google Gemini in real time and is not recorded by us unless you agree. You can export or delete your data at any time from your profile. The PitchUp Live desktop app sends the audio of your real calls (your microphone and the other person) to Google Gemini only to transcribe it and suggest replies; we never store that audio, and transcripts stay on your device for the session only.",
+    "privacyBody": "We store your account details (name, email, avatar from Google), your learning progress, call transcripts and scores so the service can work. Payment data is handled by Dodo Payments; we never see your card number. Voice audio is processed by Google Gemini in real time and is not recorded by us unless you agree. You can export or delete your data at any time from your profile. The PitchUp Live desktop app sends the audio of your real calls (your microphone and the other person) to Google Gemini only to transcribe it and suggest replies; we never store that audio, and transcripts stay on your device for the session only.",
     "termsTitle": "Terms of service",
     "termsBody": "PitchUp is a training tool. AI feedback is guidance, not a guarantee of results. Don't use the service for unlawful or abusive content. Pro is prepaid for one month or one year and does not renew automatically. One-time course purchases give lifetime access to that course."
   },
