@@ -294,7 +294,11 @@
     "skillAvg": "Average per skill",
     "recentCalls": "Recent calls",
     "noCalls": "No calls yet. Make your first one!",
-    "proAnalytics": "Detailed skill analytics are a Pro feature."
+    "proAnalytics": "Detailed skill analytics are a Pro feature.",
+    "memoryTitle": "What your AI coach remembers",
+    "memorySub": "From your last {n} scored calls. The coach and the scorer use this to focus on your weak spots.",
+    "memoryWeak": "Work on",
+    "memoryStrong": "Strongest"
   },
   "leaderboard": {
     "title": "Weekly leaderboard",

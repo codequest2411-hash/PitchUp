@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { db } from "./db";
 import { getUser, isAdmin } from "./auth";
 import { personaPrompt, type CustomProduct } from "./ai";
+import { memoryForCustomer, sellerMemory } from "./memory";
 
 export const GUEST_CALL_COOKIE = "guest_call";
 
@@ -18,8 +19,12 @@ export async function loadCall(id: string) {
 export type LoadedCall = NonNullable<Awaited<ReturnType<typeof loadCall>>>;
 
 // mode decides how the customer hangs up (voice: hang_up tool, text: marker); a voice call can fall back to text.
-export const callPersona = (c: LoadedCall, mode: "voice" | "text" = "voice") =>
-  personaPrompt(c.scenario, c.difficulty, c.locale, c.customProduct as CustomProduct | null, mode);
+export const callPersona = (c: LoadedCall, mode: "voice" | "text" = "voice", history = "") =>
+  personaPrompt(c.scenario, c.difficulty, c.locale, c.customProduct as CustomProduct | null, mode, history);
+
+// The customer the seller talks to: remembers an earlier call with this seller, if any.
+export const customerPersona = async (c: LoadedCall, mode: "voice" | "text") =>
+  callPersona(c, mode, memoryForCustomer(await sellerMemory(c.userId, c.scenarioId, c.id)));
 
 // What the seller is selling, for the coach. Only the product, never the customer's persona/hidden objections.
 export function sellerBrief(c: LoadedCall) {

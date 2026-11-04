@@ -43,7 +43,7 @@ const HANGUP_NOTE: Record<Difficulty, string> = {
   BOSS: "You have almost no patience: hang up quickly if the seller is rude, pushy, vague or keeps wasting your time.",
 };
 
-export function personaPrompt(s: Scenario, difficulty: Difficulty, locale: string, product?: CustomProduct | null, mode: "voice" | "text" = "voice") {
+export function personaPrompt(s: Scenario, difficulty: Difficulty, locale: string, product?: CustomProduct | null, mode: "voice" | "text" = "voice", history = "") {
   const lang = locale === "ka" ? "Georgian" : "English";
   const male = isMaleName(s.customerName);
   return [
@@ -52,6 +52,7 @@ export function personaPrompt(s: Scenario, difficulty: Difficulty, locale: strin
     product &&
       `The product being sold: "${product.name}" — ${product.description}. Price: ${product.price}. You are a typical "${product.target}" customer.`,
     DIFFICULTY_NOTE[difficulty],
+    history,
     "Before the call, silently decide: your job and daily situation, your budget, 2 real pain points, 2 hidden objections, and 1 thing that would make you buy. Keep them consistent for the whole call.",
     "Talk like a real person on the phone: short spoken sentences (usually 1-2, never more than 3), casual words, small reactions like \"mhm\", \"wait\", \"hmm\", \"honestly…\". No lists, no formal or written style, no long explanations.",
     "React to exactly what the seller just said. If they are vague, ask what they mean. If they talk too long, cut in. If they ask a good question, answer honestly and reveal a pain point. Reveal hidden objections only when the seller digs for them.",
@@ -109,11 +110,11 @@ const SELLER_PLAYBOOK = `How to choose the line:
 
 // live: the exact next sentence for the seller (shown automatically during the call); otherwise a short tip.
 // brief: what the seller is selling (never the customer's hidden persona, so the coach can't cheat).
-export async function coachHint(transcript: Line[], locale: string, live = false, brief = "") {
+export async function coachHint(transcript: Line[], locale: string, live = false, brief = "", memory = "") {
   const fallback = FALLBACK_HINT[locale === "en" ? "en" : "ka"];
   if (!aiConfigured()) return fallback;
   const lang = locale === "ka" ? "natural spoken Georgian (as people talk in Tbilisi, correct grammar)" : "English";
-  const ctx = `${brief ? `What the seller is selling: ${brief}\n` : ""}The call so far (SELLER = the user, CUSTOMER = the person they called):\n${fmt(transcript)}`;
+  const ctx = `${brief ? `What the seller is selling: ${brief}\n` : ""}${memory ? `${memory}\n` : ""}The call so far (SELLER = the user, CUSTOMER = the person they called):\n${fmt(transcript)}`;
   try {
     const res = await client().models.generateContent({
       model: TEXT_MODEL,
@@ -171,10 +172,11 @@ const SCORE_SCHEMA = {
   },
 };
 
-export async function scoreCall(transcript: Line[], persona: string, locale: string): Promise<Score> {
+export async function scoreCall(transcript: Line[], persona: string, locale: string, history = ""): Promise<Score> {
   if (!aiConfigured() || !transcript.some((l) => l.role === "user")) return heuristicScore(transcript, locale);
   const prompt = `You are an expert sales coach. Evaluate the SELLER in this practice call.
 Customer persona: ${persona}
+${history}
 
 Transcript:
 ${fmt(transcript)}

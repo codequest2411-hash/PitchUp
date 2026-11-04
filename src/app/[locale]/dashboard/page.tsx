@@ -6,6 +6,7 @@ import { requireUser } from "@/lib/guard";
 import { callsUsedToday, FREE_CALLS_PER_DAY, userContext } from "@/lib/access";
 import { FREE_MAX_LEVEL, levelProgress } from "@/lib/levels";
 import { SKILLS } from "@/lib/scoring";
+import { sellerMemory } from "@/lib/memory";
 import { SkillBars, scoreColor } from "@/components/SkillBars";
 import { ProfessionTile } from "@/components/ProfessionIcon";
 
@@ -13,7 +14,8 @@ export default async function Page({ params }: { params: Promise<{ locale: strin
   const { locale } = await params;
   setRequestLocale(locale);
   const user = await requireUser(locale);
-  const [t, tc, tl, to, tb] = await Promise.all(["dashboard", "common", "levels", "outcome", "badges"].map((n) => getTranslations(n)));
+  const [t, tc, tl, to, tb, ts] = await Promise.all(["dashboard", "common", "levels", "outcome", "badges", "skills"].map((n) => getTranslations(n)));
+  const memory = await sellerMemory(user.id);
   const { pro, level } = await userContext(user);
   const prog = levelProgress(user.xp);
   const capped = !pro && prog.lvl > FREE_MAX_LEVEL;
@@ -113,6 +115,22 @@ export default async function Page({ params }: { params: Promise<{ locale: strin
           {pro ? <SkillBars values={avg} /> : <Link href="/pricing" className="text-accent">🔒 {t("proAnalytics")}</Link>}
         </div>
       </div>
+
+      {memory && (
+        <section className="card space-y-3 border-brand/25">
+          <div>
+            <h2 className="h2">{t("memoryTitle")}</h2>
+            <p className="text-sm text-muted">{t("memorySub", { n: memory.calls })}</p>
+          </div>
+          <div className="flex flex-wrap gap-2 text-sm">
+            {memory.weak.map((k) => <span key={k} className="chip bg-bad/10 text-bad">{t("memoryWeak")}: {ts(k)} · {memory.skills[k]}</span>)}
+            {memory.strong && <span className="chip bg-ok/15 text-ok">{t("memoryStrong")}: {ts(memory.strong)} · {memory.skills[memory.strong]}</span>}
+          </div>
+          {memory.recentTips.length > 0 && (
+            <ul className="list-disc space-y-1 pl-5 text-sm">{memory.recentTips.map((x) => <li key={x}>{x}</li>)}</ul>
+          )}
+        </section>
+      )}
 
       <div className="card space-y-3">
         <h2 className="h2">{tb("title")}</h2>

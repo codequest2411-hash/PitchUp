@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { scoreCall } from "@/lib/ai";
 import { callPersona, elapsedSec, loadCall } from "@/lib/calls";
 import { callXp } from "@/lib/levels";
+import { memoryForScorer, sellerMemory } from "@/lib/memory";
 import { addXp, awardBadge } from "@/lib/rewards";
 import type { Line } from "@/lib/scoring";
 
@@ -25,7 +26,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const transcript: Line[] =
     call.mode === "voice" && body.success && body.data.transcript?.length ? body.data.transcript : (call.transcript as Line[]);
 
-  const score = await scoreCall(transcript, callPersona(call), call.locale);
+  const score = await scoreCall(transcript, callPersona(call), call.locale, memoryForScorer(await sellerMemory(call.userId, undefined, call.id)));
   let xpEarned = 0;
   if (call.userId) {
     const user = await db.user.findUniqueOrThrow({ where: { id: call.userId } });
