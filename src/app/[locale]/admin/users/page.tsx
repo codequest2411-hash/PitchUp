@@ -12,7 +12,8 @@ export default async function Page({ params, searchParams }: { params: Promise<{
     where: q ? { OR: [{ email: { contains: q, mode: "insensitive" } }, { name: { contains: q, mode: "insensitive" } }] } : undefined,
     orderBy: { createdAt: "desc" },
     take: 200,
-    include: { subscriptions: { where: { status: "active" } } },
+    // Same rule as planTier: only unexpired subscriptions count, Ultra wins over Pro.
+    include: { subscriptions: { where: { status: { in: ["active", "trialing"] }, currentPeriodEnd: { gt: new Date() } }, select: { plan: true } } },
   });
 
   return (
@@ -29,7 +30,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
               <tr key={u.id} className={`border-t border-line ${u.banned ? "opacity-50" : ""}`}>
                 <td className="p-3">{u.name}<br /><span className="text-xs text-muted">{u.email}</span></td>
                 <td className="p-3">{u.role}</td>
-                <td className="p-3">{u.subscriptions.length ? "Pro" : "Free"}</td>
+                <td className="p-3">{u.subscriptions.some((s) => s.plan.startsWith("ultra")) ? "Ultra" : u.subscriptions.length ? "Pro" : "Free"}</td>
                 <td className="p-3 tabular-nums">{u.xp} (L{u.level})</td>
                 <td className="p-3">
                   {u.id !== me?.id && (
