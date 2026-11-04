@@ -9,7 +9,17 @@ import { canAccessCourse, userContext } from "@/lib/access";
 import { CheckoutButton } from "@/components/CheckoutButton";
 import { ProfessionIcon } from "@/components/ProfessionIcon";
 
-const ICON = { TEXT: "📖", VIDEO: "🎬", QUIZ: "❓", CALL: "📞" };
+// Same 24px line style as ProfessionIcon.
+const ICON = {
+  TEXT: <><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" /></>,
+  VIDEO: <><path d="m22 8-6 4 6 4V8Z" /><rect x="2" y="6" width="14" height="12" rx="2" /></>,
+  QUIZ: <><circle cx="12" cy="12" r="10" /><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3" /><path d="M12 17h.01" /></>,
+  CALL: <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2Z" />,
+  LOCK: <><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></>,
+};
+const Icon = ({ k, className = "h-5 w-5" }: { k: keyof typeof ICON; className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>{ICON[k]}</svg>
+);
 
 export default async function Page({ params, searchParams }: { params: Promise<{ locale: string; slug: string }>; searchParams: Promise<{ success?: string }> }) {
   const { locale, slug } = await params;
@@ -46,7 +56,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
             <ol className="divide-y divide-line">
               {m.lessons.map((l) => (
                 <li key={l.id} className="flex items-center gap-3 py-3">
-                  <span aria-hidden>{ICON[l.type]}</span>
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-bg text-brand"><Icon k={l.type} className="h-[18px] w-[18px]" /></span>
                   {access && levelOk ? (
                     <Link href={`/learn/${course.slug}/${l.id}`} className="flex-1 hover:text-brand">{tr(l, "title", locale)}</Link>
                   ) : (
@@ -69,7 +79,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
         </div>
         {user && <p className="text-sm text-muted">{t("progress", { done: done.size, total: lessons.length })}</p>}
         {!levelOk ? (
-          <p className="rounded-xl bg-bg p-3 text-sm">🔒 {tc("requiresLevel", { level: course.requiredLevel })}</p>
+          <p className="flex items-center gap-2 rounded-xl bg-bg p-3 text-sm"><Icon k="LOCK" className="h-4 w-4 text-muted" />{tc("requiresLevel", { level: course.requiredLevel })}</p>
         ) : access ? (
           complete ? (
             <Link href={`/certificate/${course.slug}`} className="btn-accent w-full">🎓 {t("certificate")}</Link>
