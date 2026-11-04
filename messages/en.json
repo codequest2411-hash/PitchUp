@@ -265,7 +265,8 @@
     "timeUp": "Time is up — ending the call.",
     "ended": "This call has ended.",
     "startHint": "Start the conversation — introduce yourself.",
-    "start": "Start call"
+    "start": "Start call",
+    "hungUp": "{name} hung up"
   },
   "results": {
     "title": "Call results",
@@ -426,6 +427,8 @@
     "err_login": "Your session expired. Please log in again.",
     "err_noSystem": "Could not capture the computer audio. Allow screen/system audio sharing and try again.",
     "err_mic": "Microphone access was denied. Allow it in Windows Settings → Privacy → Microphone.",
-    "err_failed": "Something went wrong. Please try again."
+    "err_failed": "Something went wrong. Please try again.",
+    "briefLabel": "What are you selling? (optional, helps the coach)",
+    "briefPlaceholder": "e.g. Website design for small shops, from $400, delivered in 2 weeks"
   }
 }

@@ -10,6 +10,14 @@ export function LiveAssistClient({ pro, freeLimit }: { pro: boolean; freeLimit: 
   const t = useTranslations("assist");
   const locale = useLocale();
   const [told, setTold] = useState(false);
+  const [brief, setBrief] = useState("");
+  const briefRef = useRef("");
+  briefRef.current = brief;
+  useEffect(() => {
+    try {
+      setBrief(localStorage.getItem("assistBrief") ?? "");
+    } catch {}
+  }, []);
   const [running, setRunning] = useState(false);
   const [turns, setTurns] = useState<Turn[]>([]);
   const [reply, setReply] = useState("");
@@ -43,7 +51,7 @@ export function LiveAssistClient({ pro, freeLimit }: { pro: boolean; freeLimit: 
     const res = await fetch("/api/live-assist", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ speaker: role, audio, transcript, locale }),
+      body: JSON.stringify({ speaker: role, audio, transcript, locale, brief: briefRef.current.slice(0, 600) || undefined }),
     }).catch(() => null);
     const data = res?.ok ? await res.json() : null;
     update((all) => (data?.heard ? all.map((x) => (x.id === id ? { ...x, text: data.heard } : x)) : all.filter((x) => x.id !== id)));
@@ -72,6 +80,16 @@ export function LiveAssistClient({ pro, freeLimit }: { pro: boolean; freeLimit: 
         <div className="card space-y-3">
           <p className="text-sm font-semibold">{t("consentTitle")}</p>
           <p className="text-sm text-muted">{t("consentText")}</p>
+          <label className="block text-sm">
+            <span className="font-semibold">{t("briefLabel")}</span>
+            <textarea value={brief} maxLength={600} rows={3} placeholder={t("briefPlaceholder")} className="input mt-1 text-sm"
+              onChange={(e) => {
+                setBrief(e.target.value);
+                try {
+                  localStorage.setItem("assistBrief", e.target.value);
+                } catch {}
+              }} />
+          </label>
           <label className="flex items-start gap-2 text-sm">
             <input type="checkbox" checked={told} onChange={(e) => setTold(e.target.checked)} className="mt-1" />
             {t("consentCheck")}

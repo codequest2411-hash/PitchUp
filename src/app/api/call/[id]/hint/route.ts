@@ -3,7 +3,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { getUser } from "@/lib/auth";
 import { coachHint } from "@/lib/ai";
-import { loadCall } from "@/lib/calls";
+import { loadCall, sellerBrief } from "@/lib/calls";
 import { HINT_COST, levelFromXp } from "@/lib/levels";
 import type { Line } from "@/lib/scoring";
 
@@ -18,7 +18,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   // Live coach: free, but only right after a customer line so it can't be spammed.
   if (body.success && body.data.live) {
     if (transcript.at(-1)?.role !== "ai") return NextResponse.json({ error: "not your turn" }, { status: 409 });
-    return NextResponse.json({ hint: await coachHint(transcript, call.locale, true) });
+    return NextResponse.json({ hint: await coachHint(transcript, call.locale, true, sellerBrief(call)) });
   }
 
   const user = await getUser();
@@ -27,5 +27,5 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     await db.user.update({ where: { id: user.id }, data: { xp, level: levelFromXp(xp) } });
   }
   await db.call.update({ where: { id: call.id }, data: { hintsUsed: { increment: 1 } } });
-  return NextResponse.json({ hint: await coachHint(transcript, call.locale) });
+  return NextResponse.json({ hint: await coachHint(transcript, call.locale, false, sellerBrief(call)) });
 }

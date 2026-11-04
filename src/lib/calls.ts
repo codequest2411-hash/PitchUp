@@ -17,7 +17,16 @@ export async function loadCall(id: string) {
 
 export type LoadedCall = NonNullable<Awaited<ReturnType<typeof loadCall>>>;
 
-export const callPersona = (c: LoadedCall) =>
-  personaPrompt(c.scenario, c.difficulty, c.locale, c.customProduct as CustomProduct | null);
+// mode decides how the customer hangs up (voice: hang_up tool, text: marker); a voice call can fall back to text.
+export const callPersona = (c: LoadedCall, mode: "voice" | "text" = "voice") =>
+  personaPrompt(c.scenario, c.difficulty, c.locale, c.customProduct as CustomProduct | null, mode);
+
+// What the seller is selling, for the coach. Only the product, never the customer's persona/hidden objections.
+export function sellerBrief(c: LoadedCall) {
+  const p = c.customProduct as CustomProduct | null;
+  if (p?.name) return `${p.name}. ${p.description} Price: ${p.price || "not given"}. Typical customer: ${p.target || "not given"}.`;
+  const offered = c.scenario.personaPromptEn.match(/offering you (.+?)\.(?:\s|$)/)?.[1];
+  return `${offered ?? "their product"} (field: ${c.scenario.profession.titleEn}). Price not given.`;
+}
 
 export const elapsedSec = (c: { startedAt: Date }) => Math.round((Date.now() - c.startedAt.getTime()) / 1000);

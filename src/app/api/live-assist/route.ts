@@ -10,6 +10,7 @@ const Body = z.object({
   audio: z.string().min(100).max(1_100_000),
   transcript: z.array(z.object({ role: z.enum(["user", "ai"]), text: z.string().max(2000) })).max(40),
   locale: z.enum(["en", "ka"]),
+  brief: z.string().trim().max(600).optional(), // what the seller is selling, typed by them
 });
 
 // Used by the PitchUp Live desktop app (and /live-assist page). Audio is only passed to Gemini, never stored.
@@ -24,9 +25,9 @@ export async function POST(req: Request) {
   if (tier !== "ultra" && !(await consumeCall(`assist:${user.id}`, LIVE_ASSIST_PER_DAY[tier]))) {
     return NextResponse.json({ error: "limit" }, { status: 429 });
   }
-  const { speaker, audio, transcript, locale } = body.data;
+  const { speaker, audio, transcript, locale, brief } = body.data;
   try {
-    return NextResponse.json(await liveAssist(audio, speaker, transcript, locale));
+    return NextResponse.json(await liveAssist(audio, speaker, transcript, locale, brief));
   } catch (e) {
     console.error("liveAssist failed", e);
     return NextResponse.json({ error: "unavailable" }, { status: 503 });

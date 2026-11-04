@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { customerReply } from "@/lib/ai";
+import { customerReply, HANGUP_MARK } from "@/lib/ai";
 import { callPersona, elapsedSec, loadCall } from "@/lib/calls";
 import type { Line } from "@/lib/scoring";
 
@@ -15,8 +15,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!parsed.success) return NextResponse.json({ error: "bad request" }, { status: 400 });
 
   const transcript: Line[] = [...(call.transcript as Line[]), { role: "user", text: parsed.data.text }];
-  const reply = await customerReply(callPersona(call), transcript, call.locale);
+  const raw = await customerReply(callPersona(call, "text"), transcript, call.locale);
+  const hungUp = raw.includes(HANGUP_MARK);
+  const reply = raw.replaceAll(HANGUP_MARK, "").trim() || "...";
   transcript.push({ role: "ai", text: reply });
   await db.call.update({ where: { id: call.id }, data: { transcript } });
-  return NextResponse.json({ reply });
+  return NextResponse.json({ reply, hungUp });
 }

@@ -34,7 +34,16 @@ const DIFFICULTY_NOTE: Record<Difficulty, string> = {
   BOSS: "Be extremely demanding: very little time, many objections, only buy after an excellent pitch and a clear close.",
 };
 
-export function personaPrompt(s: Scenario, difficulty: Difficulty, locale: string, product?: CustomProduct | null) {
+// Text replies end with this marker when the customer hangs up; the server strips it.
+export const HANGUP_MARK = "[HANGUP]";
+const HANGUP_NOTE: Record<Difficulty, string> = {
+  EASY: "You are patient: hang up only if the seller is insulting or ignores you completely.",
+  NORMAL: "Hang up if the seller is rude, or keeps pushing after you clearly said no twice.",
+  HARD: "You have little patience: hang up if the seller is rude, pushy, wastes your time or keeps ignoring your objections.",
+  BOSS: "You have almost no patience: hang up quickly if the seller is rude, pushy, vague or keeps wasting your time.",
+};
+
+export function personaPrompt(s: Scenario, difficulty: Difficulty, locale: string, product?: CustomProduct | null, mode: "voice" | "text" = "voice") {
   const lang = locale === "ka" ? "Georgian" : "English";
   const male = isMaleName(s.customerName);
   return [
@@ -48,6 +57,10 @@ export function personaPrompt(s: Scenario, difficulty: Difficulty, locale: strin
     "React to exactly what the seller just said. If they are vague, ask what they mean. If they talk too long, cut in. If they ask a good question, answer honestly and reveal a pain point. Reveal hidden objections only when the seller digs for them.",
     "You are busy and a little skeptical at first. Never help the seller sell, never summarize, never give advice, never say you are an AI or a role-play, never offer to help.",
     "Do not buy because of one nice sentence. Agree to buy (or to a clear next step) only after the seller understood your needs, showed value for YOUR situation and handled your objections. If they handled you badly, end politely: you're not interested.",
+    `You can get annoyed like a real person. ${HANGUP_NOTE[difficulty]} Never hang up over a single weak line.`,
+    mode === "voice"
+      ? "To hang up: say one short, natural goodbye line that shows how you feel, then call the hang_up tool. Never say the word \"tool\"."
+      : `To hang up: write one short, natural goodbye line that shows how you feel, then end your message with ${HANGUP_MARK}.`,
     `Speak only ${lang}${locale === "ka" ? ", natural spoken Georgian as people in Tbilisi talk, with correct grammar for your gender" : ""}.`,
   ]
     .filter(Boolean)
@@ -85,16 +98,28 @@ const FALLBACK_HINT = {
   en: "Ask an open question: \"What matters most to you here?\"",
 };
 
+// How a top seller picks the next line; shared by the in-call coach and PitchUp Live.
+const SELLER_PLAYBOOK = `How to choose the line:
+- First react to the customer's LAST words specifically (acknowledge, or answer their question). Never ignore what they said or change the subject.
+- Early in the call or when you know little: ask ONE open question about their situation or problem.
+- Objection (price, trust, "I'll think about it", competitor): acknowledge it briefly, then ask what's behind it or connect to the value for THEIR situation.
+- Customer is interested or asks about details: summarise the value in their words and propose a concrete next step.
+- Customer is annoyed or busy: be brief and respectful, offer a short way forward or a better time.
+- Use only facts given about the product. Never invent prices, discounts, features or guarantees; if a fact is unknown, ask instead.`;
+
 // live: the exact next sentence for the seller (shown automatically during the call); otherwise a short tip.
-export async function coachHint(transcript: Line[], locale: string, live = false) {
+// brief: what the seller is selling (never the customer's hidden persona, so the coach can't cheat).
+export async function coachHint(transcript: Line[], locale: string, live = false, brief = "") {
   const fallback = FALLBACK_HINT[locale === "en" ? "en" : "ka"];
   if (!aiConfigured()) return fallback;
+  const lang = locale === "ka" ? "natural spoken Georgian (as people talk in Tbilisi, correct grammar)" : "English";
+  const ctx = `${brief ? `What the seller is selling: ${brief}\n` : ""}The call so far (SELLER = the user, CUSTOMER = the person they called):\n${fmt(transcript)}`;
   try {
     const res = await client().models.generateContent({
       model: TEXT_MODEL,
       contents: live
-        ? `A sales call so far:\n${fmt(transcript)}\n\nWrite ONLY the words the SELLER should say next to the customer: one short spoken sentence, max 15 words, that answers what the customer just said and moves toward the sale (ask a sharp question, handle the objection, or ask for the next step). Not advice, not "you should…", no quotes, no labels. ${locale === "ka" ? "Georgian" : "English"}.`
-        : `You are a sales coach. Here is a sales call so far:\n${fmt(transcript)}\n\nGive the SELLER one short, concrete tip (max 25 words) for their next line. Answer in ${locale === "ka" ? "Georgian" : "English"}.`,
+        ? `You are an expert sales coach whispering to a seller during a live call.\n${ctx}\n\n${SELLER_PLAYBOOK}\n\nWrite ONLY the exact words the SELLER should say next: one or two short spoken sentences (max 25 words) in ${lang}. Not advice, not "you should…", no quotes, no labels.`
+        : `You are an expert sales coach.\n${ctx}\n\n${SELLER_PLAYBOOK}\n\nGive the SELLER one short, concrete tip for their next line (max 30 words), including an example phrase. Answer in ${lang}.`,
       config: NO_THINKING,
     });
     return res.text?.trim() || fallback;
@@ -112,10 +137,10 @@ const ASSIST_SCHEMA = {
 
 // Desktop "PitchUp Live": one call transcribes the last spoken turn of a REAL call and, after a customer
 // turn, writes the seller's next sentence (one call instead of transcribe + coachHint keeps it ~2s).
-export async function liveAssist(wavBase64: string, speaker: "user" | "ai", transcript: Line[], locale: string) {
+export async function liveAssist(wavBase64: string, speaker: "user" | "ai", transcript: Line[], locale: string, brief = "") {
   const lang = locale === "ka" ? "Georgian" : "English";
   const prompt = speaker === "ai"
-    ? `You help a SELLER during a live sales call. The call so far:\n${fmt(transcript) || "(just started)"}\n\nThe audio is what the CUSTOMER just said. heard: transcribe it word for word in its original language. reply: the exact next sentence the SELLER should say (max 30 words), in the seller's own voice, in the language the customer speaks (if unclear, ${lang}). No quotes, no preamble. If the audio has no speech, return empty strings.`
+    ? `You help a SELLER during a live sales call.\n${brief ? `What the seller is selling: ${brief}\n` : ""}The call so far:\n${fmt(transcript) || "(just started)"}\n\nThe audio is what the CUSTOMER just said. heard: transcribe it word for word in its original language. reply: the exact next words the SELLER should say (max 30 words), in the seller's own voice, in the language the customer speaks (if unclear, ${lang}). No quotes, no preamble. If the audio has no clear speech, return empty strings; never guess words.\n\n${SELLER_PLAYBOOK}`
     : `The audio is what the SELLER just said on a sales call. heard: transcribe it word for word in its original language (empty if no speech). reply: empty string.`;
   const res = await client().models.generateContent({
     model: TEXT_MODEL,

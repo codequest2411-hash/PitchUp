@@ -103,6 +103,15 @@ export function CallClient(p: Props) {
     window.location.href = `/${locale}/results/${p.id}`;
   }, [p.id, locale]);
 
+  // The customer hung up: show it for a moment, then score the call like a normal end.
+  const [hungUp, setHungUp] = useState(false);
+  const hangUp = useCallback(() => {
+    setHungUp(true);
+    setSuggestion(null);
+    voice.current?.setMuted(true);
+    setTimeout(() => void end(), 2200);
+  }, [end]);
+
   // Timer + auto end when time runs out.
   useEffect(() => {
     const tick = () => {
@@ -170,6 +179,7 @@ export function CallClient(p: Props) {
             return last?.role === role ? [...prev.slice(0, -1), { role, text: last.text + chunk }] : [...prev, { role, text: chunk }];
           }),
         onClose: () => void end(),
+        onHangUp: hangUp,
       });
       setStatus("live");
     } catch (e) {
@@ -186,8 +196,9 @@ export function CallClient(p: Props) {
     setLines((l) => [...l, { role: "user", text }]);
     const res = await fetch(`/api/call/${p.id}/message`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text }) });
     if (res.ok) {
-      const { reply } = await res.json();
+      const { reply, hungUp: gone } = await res.json();
       setLines((l) => [...l, { role: "ai", text: reply }]);
+      if (gone) hangUp();
     } else if (res.status === 409) void end();
     else setNotice(tc("error"));
     setSending(false);
@@ -247,9 +258,14 @@ export function CallClient(p: Props) {
             {statusText && <span className="ml-2 font-sans text-white/60" aria-live="polite">· {statusText}</span>}
           </p>
           <canvas ref={canvas} width={320} height={40} className="h-10 w-full max-w-[16rem]" aria-hidden />
+          {hungUp && (
+            <p role="alert" className="rounded-2xl bg-[#ff3b30]/90 px-4 py-2 text-center text-sm font-semibold">
+              📵 {t("hungUp", { name: p.customerName })}
+            </p>
+          )}
           {notice && <p role="status" className="rounded-2xl bg-white/10 px-4 py-2 text-center text-sm">{notice}</p>}
           {hint && <p role="status" className="rounded-2xl bg-white/15 px-4 py-2 text-center text-sm">💡 {hint}</p>}
-          {liveCoach && status === "live" && (
+          {liveCoach && status === "live" && !hungUp && (
             <div role="status" aria-live="polite" className="w-full rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-left backdrop-blur">
               <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-white/60">🎯 {t("sayThis")}</p>
               <p className="mt-1 text-[15px] leading-snug">{suggestion ?? <span className="text-white/50">{t("coachWaiting")}</span>}</p>
@@ -285,7 +301,7 @@ export function CallClient(p: Props) {
                 </div>
               ))}
             </div>
-            {mode === "text" && status === "live" && (
+            {mode === "text" && status === "live" && !hungUp && (
               <form onSubmit={send} className="flex gap-2 border-t border-white/10 p-3">
                 <label htmlFor="msg" className="sr-only">{t("placeholder")}</label>
                 <input id="msg" value={input} onChange={(e) => setInput(e.target.value)} maxLength={1000} autoFocus autoComplete="off"

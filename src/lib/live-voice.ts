@@ -29,7 +29,9 @@ function rms(a: AnalyserNode) {
   return Math.sqrt(d.reduce((sum, v) => sum + v * v, 0) / d.length);
 }
 
-export type VoiceHandlers = { onText: (role: "user" | "ai", chunk: string) => void; onClose: () => void };
+export const HANG_UP_TOOLS = [{ functionDeclarations: [{ name: "hang_up", description: "End the phone call right now because you are angry or done talking to this seller. Say your goodbye line first." }] }];
+
+export type VoiceHandlers = { onText: (role: "user" | "ai", chunk: string) => void; onClose: () => void; onHangUp: () => void };
 
 export async function startVoice(token: string, model: string, h: VoiceHandlers) {
   const mic = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } });
@@ -52,6 +54,7 @@ export async function startVoice(token: string, model: string, h: VoiceHandlers)
   let next = 0;
   let muted = false;
   let stopped = false;
+  let hangingUp = false;
 
   function play(b64: string) {
     const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
@@ -72,10 +75,23 @@ export async function startVoice(token: string, model: string, h: VoiceHandlers)
   const ai = new GoogleGenAI({ apiKey: token, httpOptions: { apiVersion: "v1alpha" } });
   const session = await ai.live.connect({
     model,
-    // The real config (persona, transcription) is locked into the token server-side.
-    config: { responseModalities: [Modality.AUDIO] },
+    // The real config (persona, transcription) is locked into the token server-side; tools can't be put in the
+    // token (field_mask error), so the hang_up tool is declared here.
+    config: { responseModalities: [Modality.AUDIO], tools: HANG_UP_TOOLS },
     callbacks: {
       onmessage: (m: LiveServerMessage) => {
+        // The customer called hang_up: let the goodbye line finish playing (max ~6s), then end.
+        if (m.toolCall?.functionCalls?.some((f) => f.name === "hang_up") && !hangingUp) {
+          hangingUp = true;
+          muted = true;
+          const started = Date.now();
+          const wait = setInterval(() => {
+            if (stopped || playing.size === 0 || Date.now() - started > 6000) {
+              clearInterval(wait);
+              if (!stopped) h.onHangUp();
+            }
+          }, 250);
+        }
         const sc = m.serverContent;
         if (!sc) return;
         if (sc.interrupted) {
