@@ -146,7 +146,7 @@
     "filterProfession": "Profession",
     "filterPrice": "Price",
     "filterLevel": "Max level",
-    "lessons": "{n} lessons",
+    "lessons": "{n, plural, one {# lesson} other {# lessons}}",
     "startLearning": "Start learning",
     "continue": "Continue",
     "certificate": "Get certificate",
