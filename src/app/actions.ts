@@ -38,7 +38,7 @@ export async function deleteAccountAction() {
 }
 
 // Marks a lesson done once; quiz answers are checked here, never trusted from the client.
-export async function completeLessonAction(lessonId: string, answers: number[] = []) {
+export async function completeLessonAction(lessonId: string, answers: Record<string, number> = {}) {
   const user = await getUser();
   if (!user) return { ok: false as const };
   const lesson = await db.lesson.findUnique({
@@ -48,9 +48,9 @@ export async function completeLessonAction(lessonId: string, answers: number[] =
   if (!lesson) return { ok: false as const };
   const { pro } = await userContext(user);
   if (!(await canAccessCourse(user, lesson.module.course, pro))) return { ok: false as const };
-  if (lesson.type === "QUIZ" && lesson.questions.some((q, i) => q.correctIndex !== answers[i])) {
-    return { ok: false as const, wrong: true };
-  }
+  // Matched by question id, so display order never has to equal DB order. Only ids of wrong answers go back, not the right answers.
+  const wrongIds = lesson.type === "QUIZ" ? lesson.questions.filter((q) => q.correctIndex !== answers[q.id]).map((q) => q.id) : [];
+  if (wrongIds.length) return { ok: false as const, wrong: true, wrongIds, total: lesson.questions.length };
 
   const course = lesson.module.course;
   const existing = await db.lessonProgress.findUnique({ where: { userId_lessonId: { userId: user.id, lessonId } } });

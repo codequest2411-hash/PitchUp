@@ -35,7 +35,7 @@ const withStats = {
 } as const;
 
 // Most-enrolled first; level breaks ties so a brand-new catalog still shows the beginner courses.
-export const getPopularCourses = cached("courses-popular-v4", (take: number) =>
+export const getPopularCourses = cached("courses-popular-v5", (take: number) =>
   db.course.findMany({
     where: { published: true },
     include: withStats,
@@ -44,7 +44,7 @@ export const getPopularCourses = cached("courses-popular-v4", (take: number) =>
   }),
 );
 
-export const getCourses = cached("courses-v4", (profession?: string, price?: string, level?: number) =>
+export const getCourses = cached("courses-v5", (profession?: string, price?: string, level?: number) =>
   db.course.findMany({
     where: {
       published: true,
@@ -57,7 +57,7 @@ export const getCourses = cached("courses-v4", (profession?: string, price?: str
   }),
 );
 
-export const getCourse = cached("course", (slug: string) =>
+export const getCourse = cached("course-v2", (slug: string) =>
   db.course.findUnique({
     where: { slug },
     include: {

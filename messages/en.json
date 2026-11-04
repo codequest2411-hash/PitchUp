@@ -196,7 +196,17 @@
     "correct": "Correct! +{xp} XP",
     "wrong": "Not quite — try again.",
     "startCall": "Start practice call",
-    "loginToSave": "Log in to save your progress."
+    "loginToSave": "Log in to save your progress.",
+    "takeaway": "Key takeaway",
+    "sayThis": "Say this",
+    "avoidThis": "Avoid this",
+    "progress": "Lesson {n} of {total}",
+    "readTime": "{min} min read",
+    "score": "{right} of {total} correct — fix the marked ones and check again.",
+    "answered": "{n} of {total} answered",
+    "right": "Right",
+    "tryAgain": "Try again",
+    "prev": "Previous"
   },
   "practice": {
     "title": "Practice a sales call",
