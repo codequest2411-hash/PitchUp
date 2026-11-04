@@ -27,10 +27,15 @@ export const getProfession = cached("profession-v3", (slug: string) =>
   }),
 );
 
-const withStats = { profession: true, _count: { select: { enrollments: true, modules: true } } } as const;
+// Lesson titles and types let catalog cards show what a course teaches.
+const withStats = {
+  profession: true,
+  _count: { select: { enrollments: true } },
+  modules: { select: { lessons: { select: { type: true, titleEn: true, titleKa: true }, orderBy: { order: "asc" as const } } }, orderBy: { order: "asc" as const } },
+} as const;
 
 // Most-enrolled first; level breaks ties so a brand-new catalog still shows the beginner courses.
-export const getPopularCourses = cached("courses-popular-v3", (take: number) =>
+export const getPopularCourses = cached("courses-popular-v4", (take: number) =>
   db.course.findMany({
     where: { published: true },
     include: withStats,
@@ -39,7 +44,7 @@ export const getPopularCourses = cached("courses-popular-v3", (take: number) =>
   }),
 );
 
-export const getCourses = cached("courses-v3", (profession?: string, price?: string, level?: number) =>
+export const getCourses = cached("courses-v4", (profession?: string, price?: string, level?: number) =>
   db.course.findMany({
     where: {
       published: true,
