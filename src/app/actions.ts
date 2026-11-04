@@ -20,9 +20,11 @@ export async function updateProfileAction(form: FormData) {
   const data = z
     .object({ name: z.string().trim().min(1).max(80), locale, optOut: z.string().optional() })
     .parse(Object.fromEntries(form));
+  // Hiding from the leaderboard is an Ultra perk; other plans can't change it.
+  const { ultra } = await userContext(user);
   await db.user.update({
     where: { id: user.id },
-    data: { name: data.name, locale: data.locale, leaderboardOptOut: data.optOut === "on" },
+    data: { name: data.name, locale: data.locale, ...(ultra ? { leaderboardOptOut: data.optOut === "on" } : {}) },
   });
   revalidatePath("/", "layout");
 }

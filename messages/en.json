@@ -326,7 +326,8 @@
     "data": "Your data",
     "export": "Export my data (JSON)",
     "delete": "Delete my account",
-    "deleteConfirm": "This permanently deletes your account, calls and progress. Continue?"
+    "deleteConfirm": "This permanently deletes your account, calls and progress. Continue?",
+    "ultraOnly": "Available on Ultra →"
   },
   "admin": {
     "title": "Admin panel",

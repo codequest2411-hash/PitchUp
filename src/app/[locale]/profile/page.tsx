@@ -5,6 +5,7 @@ import { requireUser } from "@/lib/guard";
 import { updateProfileAction } from "@/app/actions";
 import { DeleteAccountButton } from "@/components/DeleteAccountButton";
 import { LogoutButton } from "@/components/LogoutButton";
+import { userContext } from "@/lib/access";
 
 // shortcut: avatar comes from the Google account; custom avatar upload to Cloud Storage is not built yet.
 export default async function Page({ params }: { params: Promise<{ locale: string }> }) {
@@ -14,6 +15,7 @@ export default async function Page({ params }: { params: Promise<{ locale: strin
   const t = await getTranslations("profile");
   const tc = await getTranslations("common");
   const tp = await getTranslations("practice");
+  const { ultra } = await userContext(user);
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -42,9 +44,13 @@ export default async function Page({ params }: { params: Promise<{ locale: strin
             <option value="en">{tp("en")}</option>
           </select>
         </div>
-        <label className="flex items-center gap-2">
-          <input type="checkbox" name="optOut" defaultChecked={user.leaderboardOptOut} /> {t("optOut")}
-        </label>
+        <div className="flex flex-wrap items-center gap-2">
+          <label className={`flex items-center gap-2 ${ultra ? "" : "text-muted"}`}>
+            <input type="checkbox" name="optOut" defaultChecked={user.leaderboardOptOut} disabled={!ultra} /> {t("optOut")}
+          </label>
+          <span className="chip bg-fg text-bg">Ultra</span>
+          {!ultra && <Link href="/pricing" className="text-sm font-medium text-brand hover:underline">{t("ultraOnly")}</Link>}
+        </div>
         <button className="btn-primary">{tc("save")}</button>
       </form>
 
