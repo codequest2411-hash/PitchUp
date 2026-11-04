@@ -201,7 +201,12 @@
     "guestNote": "Guests get one 2-minute demo call. Log in for more.",
     "locked": "This option is locked for your level or plan.",
     "ka": "Georgian",
-    "en": "English"
+    "en": "English",
+    "summary": "Incoming call preview",
+    "hint_EASY": "Friendly, one objection",
+    "hint_NORMAL": "Busy, needs good questions",
+    "hint_HARD": "Skeptical, several objections",
+    "hint_BOSS": "Tough negotiator, pushes back hard"
   },
   "call": {
     "liveCoach": "Live coach",

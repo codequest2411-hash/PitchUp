@@ -20,24 +20,24 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const preset = sp.scenario ? professions.find((p) => p.scenarios.some((s) => s.id === sp.scenario)) : undefined;
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <div>
-        <h1 className="h1">{t("title")}</h1>
+    <div className="space-y-8">
+      <div className="max-w-2xl space-y-2">
+        <h1 className="text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">{t("title")}</h1>
         <p className="text-muted">{t("subtitle")}</p>
       </div>
-      <p className="chip bg-accent/15 text-accent">
-        {!user ? t("guestNote") : pro ? tc("unlimited") : tc("callsLeft", { n: callsLeft ?? 0 })}
-      </p>
       <PracticeForm
+        quota={!user ? t("guestNote") : pro ? tc("unlimited") : tc("callsLeft", { n: callsLeft ?? 0 })}
         locale={locale}
         initialProfession={preset?.slug ?? sp.profession ?? professions[0]?.slug}
         initialScenario={sp.scenario}
         professions={professions.map((p) => ({
           slug: p.slug,
+          order: p.order,
           title: tr(p, "title", locale),
           scenarios: p.scenarios.map((s) => ({
             id: s.id,
-            title: `${s.customerName} — ${tr(s, "title", locale)}`,
+            name: s.customerName,
+            title: tr(s, "title", locale),
             locked: s.requiredLevel > level || (s.isPro && !pro) || (!user && s.isPro),
           })),
         }))}
