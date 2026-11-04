@@ -12,6 +12,8 @@ import { db } from "./db";
 export const PLANS = {
   pro_monthly: { gel: 29, usd: 12, interval: "month" as const },
   pro_yearly: { gel: 249, usd: 99, interval: "year" as const },
+  ultra_monthly: { gel: 69, usd: 29, interval: "month" as const },
+  ultra_yearly: { gel: 599, usd: 249, interval: "year" as const },
 };
 export type PlanId = keyof typeof PLANS;
 export type Currency = "gel" | "usd";
@@ -90,8 +92,9 @@ export async function handleDodoEvent(event: DodoEvent) {
   if (await db.purchase.findUnique({ where: { stripePaymentId: d.payment_id } })) return;
   let sub;
   if (meta.plan && PLANS[meta.plan]) {
-    // Stack on top of any time still left on an earlier payment.
-    const current = await db.subscription.findFirst({ where: { userId: meta.userId, status: "active" }, orderBy: { currentPeriodEnd: "desc" } });
+    // Stack on top of time still left on an earlier payment of the same tier (Pro and Ultra run side by side).
+    const tier = meta.plan.split("_")[0];
+    const current = await db.subscription.findFirst({ where: { userId: meta.userId, status: "active", plan: { startsWith: tier } }, orderBy: { currentPeriodEnd: "desc" } });
     const start = current && current.currentPeriodEnd > new Date() ? current.currentPeriodEnd : new Date();
     sub = db.subscription.create({
       data: { userId: meta.userId, stripeCustomerId: "dodo", stripeSubId: d.payment_id, plan: meta.plan, status: "active", currentPeriodEnd: addPeriod(start, PLANS[meta.plan].interval) },

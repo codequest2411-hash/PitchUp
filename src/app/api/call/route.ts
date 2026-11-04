@@ -22,7 +22,7 @@ export async function POST(req: Request) {
   const b = parsed.data;
 
   const user = await getUser();
-  const { pro, level } = await userContext(user);
+  const { tier, pro, level } = await userContext(user);
   const scenario = await db.scenario.findUnique({ where: { id: b.scenarioId } });
   if (!scenario) return NextResponse.json({ error: "not found" }, { status: 404 });
 
@@ -48,7 +48,7 @@ export async function POST(req: Request) {
       locale: b.locale,
       mode: b.mode === "voice" && aiConfigured() ? "voice" : "text",
       customProduct: b.customProduct ?? undefined,
-      maxSec: !user ? MAX_SEC.guest : pro ? MAX_SEC.pro : MAX_SEC.free,
+      maxSec: user ? MAX_SEC[tier] : MAX_SEC.guest,
     },
   });
 

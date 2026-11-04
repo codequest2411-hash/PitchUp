@@ -23,7 +23,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
       <h1 className="h1">{t("billing")}</h1>
       {(await searchParams).success && <p className="card text-ok">{t("success")}</p>}
       <div className="card space-y-3">
-        <p><span className="text-muted">{t("plan")}:</span> <b>{active ? (sub.plan === "pro_yearly" ? tp("yearly") : tp("monthly")) : tc("free")}</b></p>
+        <p><span className="text-muted">{t("plan")}:</span> <b>{active ? tp(({ pro_yearly: "yearly", ultra_monthly: "ultraMonthly", ultra_yearly: "ultraYearly" } as Record<string, string>)[sub.plan] ?? "monthly") : tc("free")}</b></p>
         {sub && (
           <>
             <p><span className="text-muted">{t("status")}:</span> {sub.status}</p>

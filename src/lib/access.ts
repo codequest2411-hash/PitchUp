@@ -6,21 +6,28 @@ import { effectiveLevel } from "./levels";
 
 export const FREE_CALLS_PER_DAY = 3;
 export const GUEST_CALLS_PER_DAY = 1;
-export const MAX_SEC = { guest: 120, free: 300, pro: 1200 };
-// Spoken turns (customer or seller) per day in the PitchUp Live desktop app; pro cap only guards costs.
-export const LIVE_ASSIST_PER_DAY = { free: 30, pro: 3000 };
+export type Tier = "free" | "pro" | "ultra";
+export const MAX_SEC = { guest: 120, free: 300, pro: 1200, ultra: 3600 };
+// Spoken turns (customer or seller) per day in the PitchUp Live desktop app. Ultra has no cap.
+export const LIVE_ASSIST_PER_DAY = { free: 30, pro: 200 };
 
-export async function isPro(userId: string | undefined) {
-  if (!userId) return false;
-  const sub = await db.subscription.findFirst({
+// Ultra includes everything in Pro; the best active paid plan wins.
+export async function planTier(userId: string | undefined): Promise<Tier> {
+  if (!userId) return "free";
+  const subs = await db.subscription.findMany({
     where: { userId, status: { in: ["active", "trialing"] }, currentPeriodEnd: { gt: new Date() } },
+    select: { plan: true },
   });
-  return Boolean(sub);
+  if (!subs.length) return "free";
+  return subs.some((s) => s.plan.startsWith("ultra")) ? "ultra" : "pro";
 }
 
+export const isPro = async (userId: string | undefined) => (await planTier(userId)) !== "free";
+
 export async function userContext(user: User | null) {
-  const pro = isAdmin(user) || (await isPro(user?.id));
-  return { pro, level: user ? effectiveLevel(user.xp, pro) : 1 };
+  const tier: Tier = isAdmin(user) ? "ultra" : await planTier(user?.id);
+  const pro = tier !== "free";
+  return { tier, pro, ultra: tier === "ultra", level: user ? effectiveLevel(user.xp, pro) : 1 };
 }
 
 export async function canAccessCourse(user: User | null, course: Course, pro: boolean) {

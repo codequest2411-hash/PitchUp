@@ -20,8 +20,8 @@ export async function POST(req: Request) {
   const body = Body.safeParse(await req.json().catch(() => null));
   if (!body.success) return NextResponse.json({ error: "bad request" }, { status: 400 });
 
-  const { pro } = await userContext(user);
-  if (!(await consumeCall(`assist:${user.id}`, LIVE_ASSIST_PER_DAY[pro ? "pro" : "free"]))) {
+  const { tier } = await userContext(user);
+  if (tier !== "ultra" && !(await consumeCall(`assist:${user.id}`, LIVE_ASSIST_PER_DAY[tier]))) {
     return NextResponse.json({ error: "limit" }, { status: 429 });
   }
   const { speaker, audio, transcript, locale } = body.data;

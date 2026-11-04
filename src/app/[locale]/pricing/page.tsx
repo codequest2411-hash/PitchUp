@@ -1,7 +1,7 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { getUser } from "@/lib/auth";
-import { isPro } from "@/lib/access";
+import { planTier } from "@/lib/access";
 import { PricingCards } from "@/components/PricingCards";
 
 export default async function Page({ params, searchParams }: { params: Promise<{ locale: string }>; searchParams: Promise<{ currency?: string; canceled?: string }> }) {
@@ -27,7 +27,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           </Link>
         ))}
       </div>
-      <PricingCards currency={currency} loggedIn={Boolean(user)} pro={await isPro(user?.id)} />
+      <PricingCards currency={currency} loggedIn={Boolean(user)} tier={await planTier(user?.id)} />
       <p className="text-center text-sm text-muted">{t("courseNote")}</p>
     </div>
   );

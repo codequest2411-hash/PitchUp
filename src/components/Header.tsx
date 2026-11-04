@@ -20,7 +20,17 @@ export async function Header({ locale }: { locale: string }) {
     <>
       <Link href="/dashboard" className="btn-ghost">{t("dashboard")}</Link>
       {isAdmin(user) && <Link href="/admin" className="btn-ghost">{t("admin")}</Link>}
-      <Link href="/profile" className="btn-ghost">{t("profile")}</Link>
+      {/* Avatar instead of the "Profile" word on desktop; the menu on small screens keeps the label. */}
+      <Link href="/profile" className="flex items-center gap-2 rounded-full px-1 py-1 hover:bg-bg xl:p-0" title={t("profile")}>
+        {user.avatarUrl ? (
+          <Image src={user.avatarUrl} alt="" width={36} height={36} className="h-9 w-9 rounded-full object-cover ring-2 ring-line" />
+        ) : (
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand text-sm font-semibold uppercase text-brand-fg" aria-hidden>
+            {(user.name ?? user.email ?? "?").trim().charAt(0)}
+          </span>
+        )}
+        <span className="xl:sr-only">{t("profile")}</span>
+      </Link>
       <LogoutButton label={t("logout")} />
     </>
   ) : (

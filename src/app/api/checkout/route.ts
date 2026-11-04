@@ -6,7 +6,7 @@ import { createCheckout, paymentsConfigured } from "@/lib/payments";
 const Body = z.intersection(
   z.object({ currency: z.enum(["gel", "usd"]), locale: z.enum(["ka", "en"]) }),
   z.union([
-    z.object({ kind: z.literal("plan"), plan: z.enum(["pro_monthly", "pro_yearly"]) }),
+    z.object({ kind: z.literal("plan"), plan: z.enum(["pro_monthly", "pro_yearly", "ultra_monthly", "ultra_yearly"]) }),
     z.object({ kind: z.literal("course"), courseId: z.string().min(1) }),
   ]),
 );

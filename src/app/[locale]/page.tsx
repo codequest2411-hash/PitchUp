@@ -3,7 +3,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { getProfessions } from "@/lib/catalog";
 import { getUser } from "@/lib/auth";
-import { isPro } from "@/lib/access";
+import { planTier } from "@/lib/access";
 import { tr } from "@/lib/loc";
 import { PricingCards } from "@/components/PricingCards";
 
@@ -106,7 +106,7 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
           <h2 className="h1">{t("pricingTitle")}</h2>
           <p className="text-muted">{t("pricingSub")}</p>
         </div>
-        <PricingCards currency={locale === "ka" ? "gel" : "usd"} loggedIn={Boolean(user)} pro={await isPro(user?.id)} />
+        <PricingCards currency={locale === "ka" ? "gel" : "usd"} loggedIn={Boolean(user)} tier={await planTier(user?.id)} />
       </section>
 
       <section className="space-y-6">
