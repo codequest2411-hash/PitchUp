@@ -30,10 +30,10 @@ export async function deleteEntityAction(model: string, id: string) {
   revalidatePath("/", "layout");
 }
 
-export async function updateUserAction(userId: string, change: { banned?: boolean; role?: "STUDENT" | "ADMIN" }) {
+export async function updateUserAction(userId: string, change: { banned?: boolean }) {
   const admin = await requireAdmin();
   if (admin.id === userId) throw new Error("cannot change yourself");
-  const data = z.object({ banned: z.boolean().optional(), role: z.enum(["STUDENT", "ADMIN"]).optional() }).parse(change);
+  const data = z.object({ banned: z.boolean().optional() }).parse(change);
   await db.user.update({ where: { id: userId }, data });
   revalidatePath("/", "layout");
 }

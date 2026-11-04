@@ -38,7 +38,7 @@ export async function POST(req: Request) {
   const user = await db.user.upsert({
     where: { firebaseUid: uid },
     create: { firebaseUid: uid, email, name: name ?? email?.split("@")[0], avatarUrl, role: admin ? "ADMIN" : "STUDENT" },
-    update: { email, ...(avatarUrl ? { avatarUrl } : {}), ...(admin ? { role: "ADMIN" as const } : {}) },
+    update: { email, ...(avatarUrl ? { avatarUrl } : {}), role: admin ? "ADMIN" : "STUDENT" },
   });
   if (user.banned) return NextResponse.json({ error: "banned" }, { status: 403 });
 

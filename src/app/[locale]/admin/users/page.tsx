@@ -33,8 +33,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                 <td className="p-3 tabular-nums">{u.xp} (L{u.level})</td>
                 <td className="p-3">
                   {u.id !== me?.id && (
-                    <UserActions id={u.id} banned={u.banned} role={u.role}
-                      labels={{ ban: t("ban"), unban: t("unban"), makeAdmin: t("makeAdmin"), makeStudent: t("makeStudent") }} />
+                    <UserActions id={u.id} banned={u.banned} labels={{ ban: t("ban"), unban: t("unban") }} />
                   )}
                 </td>
               </tr>

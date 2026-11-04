@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { db } from "./db";
-import { getUser } from "./auth";
+import { getUser, isAdmin } from "./auth";
 import { personaPrompt, type CustomProduct } from "./ai";
 
 export const GUEST_CALL_COOKIE = "guest_call";
@@ -10,7 +10,7 @@ export async function loadCall(id: string) {
   const call = await db.call.findUnique({ where: { id }, include: { scenario: { include: { profession: true } } } });
   if (!call) return null;
   const user = await getUser();
-  if (user?.role === "ADMIN") return call;
+  if (isAdmin(user)) return call;
   if (call.userId) return call.userId === user?.id ? call : null;
   return (await cookies()).get(GUEST_CALL_COOKIE)?.value === id ? call : null;
 }

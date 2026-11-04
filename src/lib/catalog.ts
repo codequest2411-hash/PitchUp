@@ -27,7 +27,19 @@ export const getProfession = cached("profession", (slug: string) =>
   }),
 );
 
-export const getCourses = cached("courses", (profession?: string, price?: string, level?: number) =>
+const withStats = { profession: true, _count: { select: { enrollments: true, modules: true } } } as const;
+
+// Most-enrolled first; level breaks ties so a brand-new catalog still shows the beginner courses.
+export const getPopularCourses = cached("courses-popular", (take: number) =>
+  db.course.findMany({
+    where: { published: true },
+    include: withStats,
+    orderBy: [{ enrollments: { _count: "desc" } }, { requiredLevel: "asc" }, { isFree: "desc" }],
+    take,
+  }),
+);
+
+export const getCourses = cached("courses-v2", (profession?: string, price?: string, level?: number) =>
   db.course.findMany({
     where: {
       published: true,
@@ -35,7 +47,7 @@ export const getCourses = cached("courses", (profession?: string, price?: string
       isFree: price === "free" ? true : price === "paid" ? false : undefined,
       requiredLevel: level ? { lte: level } : undefined,
     },
-    include: { profession: true },
+    include: withStats,
     orderBy: [{ profession: { order: "asc" } }, { requiredLevel: "asc" }],
   }),
 );

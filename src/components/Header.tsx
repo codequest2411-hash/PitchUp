@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
-import { getUser } from "@/lib/auth";
+import { getUser, isAdmin } from "@/lib/auth";
 import { LocaleSwitcher } from "./LocaleSwitcher";
 import { LogoutButton } from "./LogoutButton";
 
@@ -19,7 +19,7 @@ export async function Header({ locale }: { locale: string }) {
   const account = user ? (
     <>
       <Link href="/dashboard" className="btn-ghost">{t("dashboard")}</Link>
-      {user.role === "ADMIN" && <Link href="/admin" className="btn-ghost">{t("admin")}</Link>}
+      {isAdmin(user) && <Link href="/admin" className="btn-ghost">{t("admin")}</Link>}
       <Link href="/profile" className="btn-ghost">{t("profile")}</Link>
       <LogoutButton label={t("logout")} />
     </>

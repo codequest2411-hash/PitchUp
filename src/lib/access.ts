@@ -1,6 +1,7 @@
 import { createHash } from "crypto";
 import type { Course, User } from "@prisma/client";
 import { db } from "./db";
+import { isAdmin } from "./auth";
 import { effectiveLevel } from "./levels";
 
 export const FREE_CALLS_PER_DAY = 3;
@@ -18,7 +19,7 @@ export async function isPro(userId: string | undefined) {
 }
 
 export async function userContext(user: User | null) {
-  const pro = user?.role === "ADMIN" || (await isPro(user?.id));
+  const pro = isAdmin(user) || (await isPro(user?.id));
   return { pro, level: user ? effectiveLevel(user.xp, pro) : 1 };
 }
 

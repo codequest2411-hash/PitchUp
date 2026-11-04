@@ -3,22 +3,41 @@ import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { tr } from "@/lib/loc";
 
-export async function CourseCard({ course, locale }: { course: Course & { profession: Profession; _count?: { modules: number } }; locale: string }) {
+type CardCourse = Course & { profession: Profession; _count?: { modules: number; enrollments?: number } };
+
+// Each profession gets its own hue so the grid reads at a glance without stock images.
+const hue = (p: Profession) => (p.order * 37 + 225) % 360;
+
+export async function CourseCard({ course, locale, rank }: { course: CardCourse; locale: string; rank?: number }) {
   const t = await getTranslations("common");
+  const tc = await getTranslations("courses");
+  const h = hue(course.profession);
+  const enrolled = course._count?.enrollments ?? 0;
   return (
-    <Link href={`/courses/${course.slug}`} className="card flex flex-col gap-3 transition hover:-translate-y-0.5 hover:border-fg/15 hover:shadow-[0_12px_32px_-16px_rgb(16_24_40/0.25)]">
-      <div className="flex h-28 items-center justify-center rounded-xl bg-gradient-to-br from-brand/10 to-brand/25 text-5xl" aria-hidden>
-        {course.profession.icon}
-      </div>
-      <div className="flex flex-wrap gap-2">
-        <span className={`chip ${course.isFree ? "bg-ok/15 text-ok" : "bg-accent/15 text-accent"}`}>
+    <Link
+      href={`/courses/${course.slug}`}
+      className="group card flex flex-col gap-3 overflow-hidden p-0 transition hover:-translate-y-0.5 hover:border-fg/15 hover:shadow-[0_16px_40px_-20px_rgb(16_24_40/0.35)]"
+    >
+      <div
+        className="relative flex h-32 items-end justify-between p-4"
+        style={{ background: `linear-gradient(135deg, hsl(${h} 85% 94%), hsl(${(h + 30) % 360} 70% 84%))` }}
+      >
+        <span className="text-5xl transition group-hover:scale-110" aria-hidden>{course.profession.icon}</span>
+        <span className={`chip ${course.isFree ? "bg-ok text-white" : "bg-fg text-bg"}`}>
           {course.isFree ? t("free") : locale === "ka" ? `₾${course.priceGel}` : `$${course.priceUsd}`}
         </span>
-        <span className="chip bg-bg text-muted">{t("level", { level: course.requiredLevel })}</span>
-        <span className="chip bg-bg text-muted">{t("minutes", { min: course.durationMin })}</span>
+        {rank && <span className="absolute left-4 top-3 font-mono text-xs font-semibold text-fg/60">#{rank}</span>}
       </div>
-      <h3 className="font-semibold tracking-tight">{tr(course, "title", locale)}</h3>
-      <p className="line-clamp-2 text-sm text-muted">{tr(course, "description", locale)}</p>
+      <div className="flex flex-1 flex-col gap-2 px-5 pb-5">
+        <p className="text-xs font-medium text-muted">{tr(course.profession, "title", locale)}</p>
+        <h3 className="font-semibold leading-snug tracking-tight">{tr(course, "title", locale)}</h3>
+        <p className="line-clamp-2 text-sm text-muted">{tr(course, "description", locale)}</p>
+        <div className="mt-auto flex flex-wrap gap-x-3 gap-y-1 pt-2 text-xs text-muted">
+          <span>{t("level", { level: course.requiredLevel })}</span>
+          <span>· {t("minutes", { min: course.durationMin })}</span>
+          {enrolled > 0 && <span>· {tc("students", { n: enrolled })}</span>}
+        </div>
+      </div>
     </Link>
   );
 }

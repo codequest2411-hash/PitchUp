@@ -47,6 +47,25 @@ const courses = [
     bodyEn: "Closing isn't pressure — it's the natural next step. Offer two options, summarise the value, and ask directly." },
 ];
 
+// Added later: created for every profession only if missing, so re-running the seed is safe on a live DB.
+const moreCourses = [
+  { key: "cold-calling", free: true, lvl: 1, min: 25, ka: "ცივი ზარები", en: "Cold calls that work",
+    bodyKa: "ცივ ზარში პირველი 10 წამი წყვეტს ყველაფერს. თქვი ვინ ხარ, რატომ რეკავ ამ კონკრეტულ ადამიანთან და ითხოვე 30 წამი: „შეიძლება 30 წამი, და თუ არ დაგაინტერესებთ, დავასრულოთ?“. ნებართვა ამცირებს წინააღმდეგობას.",
+    bodyEn: "On a cold call the first 10 seconds decide everything. Say who you are, why you are calling this specific person, and ask for 30 seconds: 'Can I take 30 seconds, and if it's not relevant we'll hang up?'. Asking permission lowers resistance.",
+    q: { ka: "რა ამცირებს წინააღმდეგობას ცივი ზარის დასაწყისში?", en: "What lowers resistance at the start of a cold call?",
+      options: [{ ka: "მოკლე დროის ნებართვის თხოვნა", en: "Asking permission for a short amount of time" }, { ka: "სწრაფად ლაპარაკი, რომ არ გაგაწყვეტინონ", en: "Talking fast so they can't interrupt" }, { ka: "ფასის პირველივე წინადადებაში თქმა", en: "Stating the price in the first sentence" }], correct: 0 } },
+  { key: "follow-up", free: false, lvl: 2, min: 30, ka: "Follow-up და რეკომენდაციები", en: "Follow-ups and referrals",
+    bodyKa: "გარიგებების უმეტესობა მე-2–5 კონტაქტზე იხურება. ყოველ ზარს დაასრულე კონკრეტული შემდეგი ნაბიჯით (დღე და საათი). კმაყოფილ მომხმარებელს სთხოვე ერთი სახელი: „ვის იცნობთ, ვისაც ეს ასევე გამოადგება?“.",
+    bodyEn: "Most deals close on the 2nd to 5th contact. End every call with a concrete next step (day and time). Ask happy customers for one name: 'Who do you know who could use this too?'.",
+    q: { ka: "როგორ უნდა დასრულდეს ყოველი ზარი?", en: "How should every call end?",
+      options: [{ ka: "„დაგირეკავთ რამდენიმე დღეში“", en: "'I'll call you in a few days'" }, { ka: "კონკრეტული შემდეგი ნაბიჯით: დღე და საათი", en: "With a concrete next step: day and time" }, { ka: "ფასდაკლების შეთავაზებით", en: "With a discount offer" }], correct: 1 } },
+  { key: "negotiation", free: false, lvl: 3, min: 35, ka: "ფასზე მოლაპარაკება", en: "Negotiating on price",
+    bodyKa: "ფასდაკლებას ნუ მისცემ უფასოდ — ყოველ დათმობაზე ითხოვე რამე სანაცვლოდ (გრძელი კონტრაქტი, წინასწარი გადახდა, რეკომენდაცია). „ძვირია“ ხშირად ნიშნავს „ღირებულება ვერ დავინახე“ — ჯერ ღირებულებას დაუბრუნდი.",
+    bodyEn: "Never give a discount for free: trade every concession for something (a longer contract, upfront payment, a referral). 'It's expensive' often means 'I don't see the value yet', so go back to value first.",
+    q: { ka: "მომხმარებელი ფასდაკლებას ითხოვს. საუკეთესო პასუხი?", en: "The customer asks for a discount. Best response?",
+      options: [{ ka: "მაშინვე 10%-ის დათმობა", en: "Give 10% right away" }, { ka: "უარი და ზარის დასრულება", en: "Refuse and end the call" }, { ka: "დათმობა მხოლოდ რამის სანაცვლოდ", en: "Concede only in exchange for something" }], correct: 2 } },
+];
+
 const quiz = {
   qKa: "რომელია საუკეთესო პირველი ნაბიჯი ზარში?", qEn: "What is the best first step on a call?",
   options: [
@@ -106,6 +125,38 @@ async function main() {
                   { type: LessonType.CALL, order: 2, xpReward: 25, titleKa: "პრაქტიკული ზარი", titleEn: "Practice call",
                     contentKa: "გამოიყენე ნასწავლი რეალურ ზარში.", contentEn: "Use what you learned on a real call.",
                     scenarioId: scenarios[Math.min(k, 2)].id },
+                ],
+              },
+            }],
+          },
+        },
+      });
+    }
+  }
+  for (const p of professions) {
+    const prof = await db.profession.findUnique({ where: { slug: p.slug }, include: { scenarios: { orderBy: { requiredLevel: "asc" } } } });
+    if (!prof) continue;
+    for (const [k, c] of moreCourses.entries()) {
+      const slug = `${p.slug}-${c.key}`;
+      if (await db.course.findUnique({ where: { slug } })) continue;
+      await db.course.create({
+        data: {
+          slug, professionId: prof.id,
+          titleKa: `${c.ka}: ${p.ka}`, titleEn: `${c.en}: ${p.en}`,
+          descriptionKa: c.bodyKa, descriptionEn: c.bodyEn,
+          durationMin: c.min, requiredLevel: c.lvl, isFree: c.free,
+          priceGel: c.free ? 0 : 49, priceUsd: c.free ? 0 : 19,
+          modules: {
+            create: [{
+              titleKa: "მთავარი მოდული", titleEn: "Core module", order: 0,
+              lessons: {
+                create: [
+                  { type: LessonType.TEXT, order: 0, xpReward: 10, titleKa: "თეორია", titleEn: "Theory", contentKa: c.bodyKa, contentEn: c.bodyEn },
+                  { type: LessonType.QUIZ, order: 1, xpReward: 15, titleKa: "ქვიზი", titleEn: "Quiz",
+                    questions: { create: [{ questionKa: c.q.ka, questionEn: c.q.en, options: c.q.options, correctIndex: c.q.correct }] } },
+                  { type: LessonType.CALL, order: 2, xpReward: 25, titleKa: "პრაქტიკული ზარი", titleEn: "Practice call",
+                    contentKa: "გამოიყენე ნასწავლი რეალურ ზარში.", contentEn: "Use what you learned on a real call.",
+                    scenarioId: prof.scenarios[Math.min(k, prof.scenarios.length - 1)]?.id },
                 ],
               },
             }],

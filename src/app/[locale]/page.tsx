@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { getProfessions } from "@/lib/catalog";
@@ -12,6 +13,7 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
   const t = await getTranslations("landing");
   const td = await getTranslations("difficulty");
   const tcall = await getTranslations("call");
+  const tcommon = await getTranslations("common");
   const user = await getUser();
   const professions = await getProfessions();
 
@@ -67,6 +69,22 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
               <h3 className="h2">{t(`step${n}Title`)}</h3>
               <p className="text-muted">{t(`step${n}Text`)}</p>
             </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="grid items-center gap-8 md:grid-cols-[1fr_1.3fr]">
+        <div className="min-w-0 space-y-4">
+          <h2 className="h1 text-balance break-words">{t("photoTitle")}</h2>
+          <p className="text-lg text-muted text-pretty">{t("photoSub")}</p>
+          <Link href="/courses" className="btn-primary inline-flex px-5 py-2.5">{tcommon("courses")} →</Link>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          {([["/images/closer-desk.webp", t("photoCap1")], ["/images/closer-floor.webp", t("photoCap2")]] as const).map(([src, cap], i) => (
+            <figure key={src} className={`relative aspect-[4/5] overflow-hidden rounded-2xl bg-fg ${i ? "mt-10" : ""}`}>
+              <Image src={src} alt="" fill sizes="(max-width: 768px) 50vw, 340px" className="object-cover" />
+              <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent p-4 pt-12 text-sm font-semibold text-white">{cap}</figcaption>
+            </figure>
           ))}
         </div>
       </section>

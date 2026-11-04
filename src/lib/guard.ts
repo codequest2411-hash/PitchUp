@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { redirect } from "@/i18n/navigation";
-import { getUser } from "./auth";
+import { getUser, isAdmin } from "./auth";
 
 export async function requireUser(locale: string) {
   const user = await getUser();
@@ -10,6 +10,6 @@ export async function requireUser(locale: string) {
 
 export async function requireAdmin() {
   const user = await getUser();
-  if (user?.role !== "ADMIN") notFound();
+  if (!user || !isAdmin(user)) notFound();
   return user;
 }

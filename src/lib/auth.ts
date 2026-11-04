@@ -67,6 +67,9 @@ export async function deleteSupabaseUser(uid: string) {
   if (key && !uid.startsWith("dev:")) await supabaseFetch(`/admin/users/${uid}`, { method: "DELETE" }, key).catch(() => {});
 }
 
+// Admin access comes only from ADMIN_EMAILS; the stored role just mirrors it.
+export const isAdmin = (user?: { email: string | null } | null) => isAdminEmail(user?.email);
+
 export function isAdminEmail(email?: string | null) {
   const list = (process.env.ADMIN_EMAILS ?? "").split(",").map((s) => s.trim().toLowerCase());
   return Boolean(email && list.includes(email.toLowerCase()));
