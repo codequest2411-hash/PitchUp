@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { callXp, effectiveLevel, levelFromXp, levelProgress, nextStreak } from "@/lib/levels";
+import { LEVELS, callXp, effectiveLevel, levelFromXp, levelProgress, nextStreak } from "@/lib/levels";
 
 describe("levels", () => {
   it("maps XP to levels at the thresholds", () => {
@@ -7,7 +7,12 @@ describe("levels", () => {
     expect(levelFromXp(99)).toBe(1);
     expect(levelFromXp(100)).toBe(2);
     expect(levelFromXp(6000)).toBe(10);
-    expect(levelFromXp(99999)).toBe(10);
+    expect(levelFromXp(7999)).toBe(10);
+    expect(levelFromXp(8000)).toBe(11); // 6000 + 1800 + 200
+    expect(LEVELS).toHaveLength(100);
+    expect(levelFromXp(LEVELS[99])).toBe(100);
+    expect(levelFromXp(LEVELS[99] * 10)).toBe(100);
+    for (let i = 1; i < LEVELS.length; i++) expect(LEVELS[i]).toBeGreaterThan(LEVELS[i - 1]);
   });
 
   it("caps free users at level 3", () => {
@@ -17,7 +22,7 @@ describe("levels", () => {
 
   it("reports progress inside a level", () => {
     expect(levelProgress(175)).toMatchObject({ lvl: 2, from: 100, to: 250, pct: 50 });
-    expect(levelProgress(7000).pct).toBe(100);
+    expect(levelProgress(LEVELS[99] + 5000)).toMatchObject({ lvl: 100, pct: 100 });
   });
 
   it("scales call XP by difficulty and sale", () => {

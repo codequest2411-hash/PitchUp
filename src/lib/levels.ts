@@ -1,7 +1,12 @@
 import type { Difficulty } from "@prisma/client";
 
-// XP needed to reach level N is LEVELS[N-1].
-export const LEVELS = [0, 100, 250, 500, 900, 1400, 2100, 3000, 4200, 6000];
+// XP needed to reach level N is LEVELS[N-1]. Levels 1-10 are hand-tuned; 11-100 each need 200 XP more than the step before.
+const BASE = [0, 100, 250, 500, 900, 1400, 2100, 3000, 4200, 6000];
+export const MAX_LEVEL = 100;
+export const LEVELS = Array.from({ length: MAX_LEVEL - BASE.length }).reduce<number[]>(
+  (acc, _, k) => [...acc, acc[acc.length - 1] + 1800 + 200 * (k + 1)],
+  BASE,
+);
 export const FREE_MAX_LEVEL = 3;
 export const HINT_COST = 5;
 export const DIFFICULTY_MIN_LEVEL: Record<Difficulty, number> = { EASY: 1, NORMAL: 1, HARD: 3, BOSS: 5 };
