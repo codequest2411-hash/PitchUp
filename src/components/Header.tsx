@@ -11,6 +11,7 @@ export async function Header({ locale }: { locale: string }) {
     ["/practice", t("practice")],
     ["/courses", t("courses")],
     ["/professions", t("professions")],
+    ["/legends", t("legends")],
     ["/leaderboard", t("leaderboard")],
     ["/pricing", t("pricing")],
   ] as const;

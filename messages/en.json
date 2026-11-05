@@ -37,7 +37,8 @@
     "privacy": "Privacy",
     "terms": "Terms",
     "rights": "All rights reserved.",
-    "menu": "Menu"
+    "menu": "Menu",
+    "legends": "Legends"
   },
   "levels": {
     "1": "Beginner",
@@ -434,5 +435,15 @@
     "err_failed": "Something went wrong. Please try again.",
     "briefLabel": "What are you selling? (optional, helps the coach)",
     "briefPlaceholder": "e.g. Website design for small shops, from $400, delivered in 2 weeks"
+  },
+  "legends": {
+    "eyebrow": "Big names",
+    "title": "How the big names got there",
+    "subtitle": "Famous sellers and founders, where they started, what they did, and the one lesson you can use on your next call.",
+    "start": "Where they started",
+    "how": "How they did it",
+    "lesson": "Use this on your next call",
+    "practice": "Practice {skill}",
+    "note": "Short summaries of widely reported public facts, written by PitchUp."
   }
 }
